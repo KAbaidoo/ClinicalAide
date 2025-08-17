@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv:*)",
+      "Bash(mkdir:*)",
+      "Bash(./gradlew:*)",
+      "Bash(chmod:*)",
+      "Bash(adb:*)",
+      "Bash(./run-tests.sh)",
+      "Bash(open app/build/reports/androidTests/connected/index.html)",
+      "Bash(afplay:*)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)",
+      "Bash(git rm:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
