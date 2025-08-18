@@ -166,4 +166,17 @@ interface StgDao {
     
     @Query("DELETE FROM stg_search_cache")
     suspend fun deleteAllSearchCache()
+    
+    // Count operations for statistics
+    @Query("SELECT COUNT(*) FROM stg_chapters")
+    suspend fun getChapterCount(): Int
+    
+    @Query("SELECT COUNT(*) FROM stg_conditions")
+    suspend fun getConditionCount(): Int
+    
+    @Query("SELECT COUNT(*) FROM stg_medications")
+    suspend fun getMedicationCount(): Int
+    
+    @Query("SELECT COUNT(*) FROM stg_content_blocks")
+    suspend fun getContentBlockCount(): Int
 }

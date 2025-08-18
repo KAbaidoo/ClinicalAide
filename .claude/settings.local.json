@@ -11,9 +11,15 @@
       "Bash(afplay:*)",
       "Bash(git add:*)",
       "Bash(git reset:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(cp:*)",
+      "Bash(python3:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "/Users/kobby/Desktop/MOH-STG"
+    ]
   }
 }

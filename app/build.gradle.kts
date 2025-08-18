@@ -56,6 +56,9 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     
+    // PDF parsing dependencies
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+    
     // Unit testing dependencies
     testImplementation(libs.junit)
     testImplementation(libs.truth)

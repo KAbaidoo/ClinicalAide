@@ -1,75 +1,144 @@
 # Next Steps for ClinicalAide Development
 
+**Last Updated**: August 18, 2025  
+**Current Focus**: Complete PDF Parsing Implementation
+
+## ✅ Recently Completed (August 18, 2025)
+1. ✅ Implemented FileBasedStgPdfParser with memory-efficient processing
+2. ✅ Fixed medication extraction patterns for multi-line formats
+3. ✅ Created comprehensive test suite (16 tests passing)
+4. ✅ Handled mangled text extraction issues
+5. ✅ Created sample PDFs for testing
+
 ## Current Status
-✅ **Database Implementation Complete** - All 81 tests passing  
-⏳ **PDF Parsing** - Next immediate priority  
-⏳ **AI Integration** - After PDF parsing  
+✅ **Database Implementation Complete** - 81 tests passing  
+🔄 **PDF Parsing Phase 1 Complete** - Parser working, 16 tests passing  
+⏳ **PDF Parsing Phase 2** - Full document processing next  
+⏳ **AI Integration** - After PDF parsing complete  
 ⏳ **User Interface** - After core functionality  
 
-## Phase 1: PDF Parsing Implementation (Priority)
+## Phase 2: Complete PDF Parsing (Priority - Week of Aug 19-23)
 
-### Prerequisites
-- [ ] Obtain Ghana STG 7th Edition PDF (708 pages)
-- [ ] Add PDF parsing library to dependencies
-- [ ] Create test subset (e.g., Chapter 1 for initial testing)
+### Immediate Tasks
 
-### Step 1: Add PDF Dependencies
+#### 1. Database Population Pipeline
+Create service to connect parser output to database:
+
 ```kotlin
-// In app/build.gradle.kts
-dependencies {
-    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
-    // or
-    implementation("com.itextpdf:itext7-core:7.2.5")
+// app/src/main/java/co/kobby/clinicalaide/data/pdf/
+class PdfToDatabaseService(
+    private val parser: FileBasedStgPdfParser,
+    private val dao: StgDao
+) {
+    suspend fun populateDatabase(pdfFileName: String) {
+        // Parse PDF and save to database
+    }
 }
 ```
 
-### Step 2: Implement PDF Parser
-Following the strategy in `docs/pdf-parsing-guide.md`:
+**Tasks**:
+- [ ] Create PdfToDatabaseService class
+- [ ] Map ParsedChapter to StgChapter entity
+- [ ] Map ParsedCondition to StgCondition entity
+- [ ] Map ParsedMedication to StgMedication entity
+- [ ] Handle content block categorization
+- [ ] Implement batch insert for performance
 
-1. **Create PDF Parser Module**
-   ```
-   app/src/main/java/co/kobby/clinicalaide/data/pdf/
-   ├── StgPdfParser.kt
-   ├── models/
-   │   ├── ParsedChapter.kt
-   │   ├── ParsedCondition.kt
-   │   └── ParsedMedication.kt
-   └── extractors/
-       ├── ChapterExtractor.kt
-       ├── ConditionExtractor.kt
-       └── MedicationExtractor.kt
-   ```
+#### 2. Process Full Ghana STG Document
+```bash
+# Test with full document
+./gradlew connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=FullDocumentParsingTest
+```
 
-2. **Implement Multi-Phase Parsing**
-   - Phase 1: Document structure analysis
-   - Phase 2: Chapter extraction
-   - Phase 3: Condition parsing
-   - Phase 4: Content block extraction
-   - Phase 5: Medication extraction
+**Tasks**:
+- [ ] Process all 708 pages
+- [ ] Extract all 22 chapters
+- [ ] Verify chapter boundaries are correct
+- [ ] Handle special pages (appendices, glossary)
+- [ ] Generate parsing report
 
-3. **Create Tests First (TDD)**
-   ```kotlin
-   // app/src/androidTest/.../data/pdf/
-   StgPdfParserTest.kt
-   ChapterExtractionTest.kt
-   MedicationExtractionTest.kt
-   ```
+#### 3. Enhanced Content Extraction
 
-### Step 3: Test with Sample Data
-1. Start with a single chapter (e.g., "Gastrointestinal Disorders")
-2. Verify extraction accuracy
-3. Populate database with test data
-4. Validate against original PDF
+**Condition Extraction Improvements**:
+- [ ] Improve numbered condition pattern matching
+- [ ] Extract ICD-10 codes where present
+- [ ] Link conditions to parent chapters
+- [ ] Handle sub-conditions and variants
 
-### Step 4: Full Document Processing
-1. Process complete 708-page document
-2. Handle edge cases and formatting variations
-3. Generate progress reports
-4. Verify data completeness
+**Content Block Categorization**:
+- [ ] Identify block types (definition, symptoms, treatment, etc.)
+- [ ] Extract structured treatment protocols
+- [ ] Parse investigation requirements
+- [ ] Capture referral criteria
 
-## Phase 2: Embedding Generation
+**Medication Details**:
+- [ ] Extract complete dosing schedules
+- [ ] Capture route of administration
+- [ ] Note contraindications
+- [ ] Extract duration of treatment
 
-### Step 1: Add TensorFlow Lite
+#### 4. Table Extraction
+Many medications are in tabular format:
+- [ ] Implement table detection
+- [ ] Parse table headers
+- [ ] Extract cell contents
+- [ ] Map to medication entities
+
+#### 5. Cross-Reference Detection
+- [ ] Identify "See also" references
+- [ ] Extract related condition mentions
+- [ ] Build relationship graph
+- [ ] Populate StgCrossReference table
+
+### Testing Strategy
+
+#### Integration Tests
+```kotlin
+@Test
+fun testFullDocumentProcessing() {
+    // Process entire PDF
+    // Verify database contains expected data
+    // Check data integrity
+}
+
+@Test
+fun testChapterCompleteness() {
+    // Verify all 22 chapters extracted
+    // Check page ranges are correct
+}
+
+@Test
+fun testMedicationCompleteness() {
+    // Verify common medications found
+    // Check dosage information
+}
+```
+
+#### Validation Tests
+- [ ] Compare extracted text with manual samples
+- [ ] Verify medication dosages against source
+- [ ] Check chapter titles match TOC
+- [ ] Validate page number references
+
+### Performance Optimization
+
+#### Memory Management
+- [ ] Monitor memory usage during full document processing
+- [ ] Optimize chunk size based on content density
+- [ ] Implement progress callbacks
+- [ ] Add cancellation support
+
+#### Database Optimization
+- [ ] Use batch inserts for better performance
+- [ ] Add missing indices (foreign key columns)
+- [ ] Implement transaction batching
+- [ ] Test with large data volumes
+
+## Phase 3: Embedding Generation (Week of Aug 26-30)
+
+### Implementation Plan
+
+#### 1. Add TensorFlow Lite
 ```kotlin
 dependencies {
     implementation("org.tensorflow:tensorflow-lite:2.13.0")
@@ -77,156 +146,151 @@ dependencies {
 }
 ```
 
-### Step 2: Implement Embedding Service
+#### 2. Download Pre-trained Model
+Options:
+- Universal Sentence Encoder Lite
+- MobileBERT
+- Custom medical embedding model
+
+#### 3. Embedding Service Implementation
 ```kotlin
-class LocalEmbeddingService {
-    fun generateEmbedding(text: String): FloatArray
-    fun calculateSimilarity(embedding1: FloatArray, embedding2: FloatArray): Float
+class LocalEmbeddingService(context: Context) {
+    private lateinit var interpreter: Interpreter
+    
+    suspend fun generateEmbeddings() {
+        // For each content block
+        // Generate embedding vector
+        // Store in StgEmbedding table
+    }
 }
 ```
 
-### Step 3: Generate Embeddings for Content
-- Process all content blocks
-- Store embeddings in database
-- Test semantic search functionality
+#### 4. Semantic Search Implementation
+```kotlin
+class SemanticSearchService(
+    private val embeddingService: LocalEmbeddingService,
+    private val dao: StgDao
+) {
+    suspend fun search(query: String): List<SearchResult> {
+        // Generate query embedding
+        // Find similar content via cosine similarity
+        // Return ranked results
+    }
+}
+```
 
-## Phase 3: Local LLM Integration
+## Phase 4: Local LLM Integration (September 2-6)
 
-### Options to Explore
-1. **Gemma 2B** - Google's lightweight model
-2. **Phi-3 Mini** - Microsoft's small model
-3. **Custom fine-tuned model** - Specific to medical domain
+### Model Selection Criteria
+- Size: < 2GB for mobile deployment
+- Performance: Response time < 3 seconds
+- Quality: Medical knowledge capability
+- License: Compatible with offline use
 
 ### Implementation Steps
-1. Choose and download model
-2. Implement inference service
-3. Create prompt templates
-4. Test response generation
+1. Model download and storage
+2. Inference engine setup
+3. Prompt engineering for medical context
+4. Response generation with citations
+5. Safety and accuracy validation
 
-## Phase 4: Chat Interface
+## Phase 5: User Interface (September 9-13)
 
-### UI Components
-1. **Chat Screen**
-   - Message list with LazyColumn
-   - Input field with send button
-   - Loading indicators
-   - Citation chips
+### Priority Screens
+1. **Chat Interface** - Primary user interaction
+2. **Browse by Chapter** - Hierarchical navigation
+3. **Search Results** - Display with snippets
+4. **Condition Details** - Full information view
+5. **Settings** - Preferences and about
 
-2. **Message Components**
-   ```kotlin
-   @Composable
-   fun UserMessage(message: String)
-   
-   @Composable
-   fun BotResponse(
-       message: String,
-       citations: List<Citation>
-   )
-   ```
+### UI Components Needed
+- Message bubbles with citation links
+- Loading states and progress indicators
+- Search bar with filters
+- Collapsible chapter list
+- Medication cards with dosage info
 
-3. **Browse Screen**
-   - Chapter list
-   - Condition details
-   - Search functionality
+## Quick Commands Reference
 
-## Phase 5: Testing & Optimization
-
-### Performance Testing
-- [ ] App launch time < 2 seconds
-- [ ] Query response time < 3 seconds
-- [ ] Memory usage < 200MB active
-- [ ] Smooth scrolling in chat
-
-### Clinical Validation
-- [ ] Verify medical accuracy
-- [ ] Test with sample queries
-- [ ] Validate citations
-- [ ] Check dosage calculations
-
-## Quick Start Commands
-
-### Start New Phase
+### Run Current Tests
 ```bash
-# Create new branch for PDF parsing
-git checkout -b feature/pdf-parsing
+# PDF Parser tests
+./gradlew connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.package=co.kobby.clinicalaide.data.pdf
 
-# Run existing tests to ensure stability
+# Database tests
+./gradlew connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.package=co.kobby.clinicalaide.data.database
+
+# All tests
 ./gradlew connectedAndroidTest
-
-# Start development
-# Open Android Studio and begin implementation
 ```
 
-### Testing Workflow
+### Development Workflow
 ```bash
-# Run specific test class
-./gradlew connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=<TestClass>
+# Check memory usage
+adb shell dumpsys meminfo co.kobby.clinicalaide
 
-# Build and install
-./gradlew installDebug
+# Monitor logcat
+adb logcat | grep -E "FileBasedParser|StgDao"
 
-# View logs
-adb logcat -s ClinicalAide
+# Clear app data
+adb shell pm clear co.kobby.clinicalaide
 ```
-
-## Resources
-
-### Documentation
-- `docs/pdf-parsing-guide.md` - Detailed parsing strategy
-- `docs/database-schema.md` - Database structure
-- `CLAUDE.md` - Project overview and guidelines
-
-### External Resources
-- [PDFBox Android Documentation](https://github.com/TomRoush/PdfBox-Android)
-- [TensorFlow Lite Android Guide](https://www.tensorflow.org/lite/android)
-- [Room Database Guide](https://developer.android.com/training/data-storage/room)
-
-## Timeline Estimate
-
-| Phase | Duration | Dependencies |
-|-------|----------|--------------|
-| PDF Parsing | 1-2 weeks | Ghana STG PDF |
-| Embedding Generation | 3-4 days | Parsed content |
-| LLM Integration | 1 week | Model selection |
-| Chat Interface | 1 week | Core functionality |
-| Testing & Optimization | 3-4 days | All features |
-
-**Total Estimated Time**: 4-5 weeks for MVP
-
-## Decision Points
-
-1. **PDF Library Selection**
-   - PDFBox: Open source, good Android support
-   - iText: Commercial, more features
-   - Custom: More control, more work
-
-2. **Embedding Model**
-   - Universal Sentence Encoder: Good general purpose
-   - BioBERT: Medical domain specific
-   - Custom: Train on Ghana STG
-
-3. **LLM Selection**
-   - Size vs. capability trade-off
-   - Quantization options
-   - Fine-tuning requirements
 
 ## Success Metrics
 
-- ✅ Database tests passing (COMPLETE)
-- ⏳ PDF parsing accuracy > 95%
-- ⏳ Embedding generation < 100ms per block
-- ⏳ Query response < 3 seconds
-- ⏳ App size < 500MB
-- ⏳ Works fully offline
+### Week 1 Goals (Aug 19-23)
+- ✅ Parser handles full document
+- ✅ Database populated with all chapters
+- ✅ 500+ conditions extracted
+- ✅ 1000+ medications identified
+- ✅ All tests passing
 
-## Notes
+### Week 2 Goals (Aug 26-30)
+- ⏳ Embeddings generated for all content
+- ⏳ Semantic search returning relevant results
+- ⏳ Search performance < 500ms
+- ⏳ 95% accuracy on test queries
 
-- Maintain TDD approach throughout
-- Document parsing patterns discovered
-- Keep performance benchmarks
-- Regular commits with clear messages
-- Update documentation as you progress
+### Week 3 Goals (Sep 2-6)
+- ⏳ LLM integrated and responding
+- ⏳ Citations correctly linked
+- ⏳ Response time < 3 seconds
+- ⏳ Medical accuracy validated
+
+## Risk Mitigation
+
+### Technical Risks
+1. **PDF parsing complexity**: Have fallback patterns ready
+2. **Memory constraints**: Implement adaptive chunk sizing
+3. **Model size**: Consider quantization options
+4. **Performance**: Profile and optimize hot paths
+
+### Data Quality Risks
+1. **OCR errors**: Implement fuzzy matching
+2. **Missing content**: Add validation checks
+3. **Incorrect parsing**: Manual review samples
+4. **Relationship errors**: Cross-reference validation
+
+## Documentation Updates Needed
+
+After completing PDF parsing:
+1. Update `pdf-parsing-implementation.md` with lessons learned
+2. Create `embedding-guide.md` for next phase
+3. Update `project-status.md` with progress
+4. Document any new patterns discovered
+
+## Support Resources
+
+### Internal Documentation
+- [PDF Parsing Implementation](pdf-parsing-implementation.md)
+- [Database Schema](database-schema.md)
+- [Project Status](project-status.md)
+
+### External Resources
+- [PDFBox Android Issues](https://github.com/TomRoush/PdfBox-Android/issues)
+- [TensorFlow Lite Examples](https://github.com/tensorflow/examples/tree/master/lite)
+- [Room Database Best Practices](https://developer.android.com/training/data-storage/room/practicing-room)
 
 ---
 
-**Ready to Start**: Begin with PDF parsing implementation. The database is ready to receive the parsed content.
+**Ready to Continue**: Focus on completing PDF parsing and populating the database with all Ghana STG content. The parser foundation is solid and ready for full document processing.

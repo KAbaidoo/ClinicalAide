@@ -1,0 +1,23 @@
+package co.kobby.clinicalaide.data.database.entities
+
+enum class ContentType {
+    DEFINITION,
+    CAUSES,
+    SYMPTOMS,
+    DIFFERENTIAL_DIAGNOSIS,
+    INVESTIGATIONS,
+    TREATMENT,
+    NON_PHARMACOLOGICAL,
+    PHARMACOLOGICAL,
+    REFERRAL,
+    PREVENTION,
+    COMPLICATIONS,
+    PROGNOSIS,
+    PATIENT_EDUCATION,
+    DOSAGE,
+    SIDE_EFFECTS,
+    CONTRAINDICATIONS,
+    MONITORING,
+    FOLLOW_UP,
+    OTHER
+}
