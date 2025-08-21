@@ -2,9 +2,9 @@
 
 ## Ghana STG Clinical Chatbot - Android Application
 
-**Last Updated**: August 18, 2025  
-**Current Sprint**: PDF Parsing Implementation  
-**Overall Progress**: 30% Complete
+**Last Updated**: August 21, 2025  
+**Current Sprint**: PDF Parsing & Content Extraction  
+**Overall Progress**: 35% Complete
 
 ---
 
@@ -46,9 +46,10 @@
   - Cache operations
 - **Performance results**: All operations 3-22x faster than baseline
 
-### Phase 2: PDF Parsing - Stage 1 (40% Complete)
+### Phase 2: PDF Parsing (60% Complete)
 **Current Status**: Active Development  
-**Start Date**: August 18, 2025
+**Start Date**: August 18, 2025  
+**Latest Update**: August 21, 2025
 
 #### Completed Components
 - ✅ **FileBasedStgPdfParser** - Main parser implementation
@@ -63,8 +64,24 @@
   - Handles multi-line formats
   - Name-only fallback detection
 
+- ✅ **Content Block Extraction** (Added August 21, 2025)
+  - ContentBlockExtractor with 10 content types
+  - Smart section header detection
+  - Content categorization (symptoms, treatment, dosage, etc.)
+  - Proper association with medical conditions
+  - 11 content block tests passing
+
+- ✅ **Service Consolidation** (August 21, 2025)
+  - Removed redundant PdfToDatabaseService
+  - Enhanced StgPdfProcessingService with Flow-based streaming
+  - Added support for custom PDF filenames
+  - Fixed foreign key constraint issues
+
 - ✅ **Test Infrastructure**
-  - 16 tests passing (100% success rate)
+  - 33 total tests passing (100% success rate)
+  - 16 PDF parser tests
+  - 11 content block extraction tests
+  - 6 integration tests
   - Sample PDF files created
   - Comprehensive integration tests
   - Memory management validation
@@ -76,34 +93,41 @@
 
 #### In Progress
 - 🔄 Full document parsing implementation
-- 🔄 Condition extraction refinement
-- 🔄 Content block categorization
+- 🔄 Database population from parsed content
+
+#### Completed
+- ✅ Content block categorization
+- ✅ Condition extraction with content blocks
+- ✅ Database indices for foreign keys
 
 #### Pending
 - ⏳ Table extraction
 - ⏳ Cross-reference detection
-- ⏳ Database population from parsed content
+- ⏳ Full document processing (708 pages)
 - ⏳ Validation layer
 
 ---
 
 ## 🔄 Active Development
 
-### Current Sprint: PDF Parsing Implementation
-**Sprint Goal**: Complete PDF parsing and populate database with Ghana STG content
+### Current Sprint: PDF Parsing & Content Extraction
+**Sprint Goal**: Complete PDF parsing with structured content extraction
 
 **This Week's Objectives**:
 1. ✅ Implement memory-efficient PDF parser
 2. ✅ Fix medication extraction patterns
 3. ✅ Handle mangled text issues
-4. 🔄 Parse complete document structure
-5. ⏳ Populate database with parsed content
+4. ✅ Implement content block extraction and categorization
+5. ✅ Consolidate services and fix architecture issues
+6. 🔄 Parse complete 708-page document
+7. 🔄 Populate database with parsed content
 
 **Blockers**: None
 
 **Technical Debt**:
-- Need to add indices for foreign key columns (compiler warnings)
+- ✅ ~~Need to add indices for foreign key columns~~ (Fixed August 21)
 - Consider implementing table extraction for dosing tables
+- Enhance content type detection patterns for edge cases
 
 ---
 
@@ -141,9 +165,10 @@
 
 ### Code Quality
 - **Test Coverage**: 95%+ for completed modules
-- **Lint Issues**: 0 errors, 4 warnings (foreign key indices)
+- **Lint Issues**: 0 errors, 0 warnings (foreign key indices fixed)
 - **Build Time**: ~20 seconds
 - **APK Size**: TBD (estimated <50MB)
+- **Total Tests**: 33 (all passing)
 
 ### Performance
 - **Database Operations**: 3-22x faster than baseline
@@ -153,8 +178,10 @@
 
 ### Development Velocity
 - **Database Phase**: 2 days (exceeded expectations)
-- **PDF Parsing Stage 1**: 1 day (on track)
+- **PDF Parsing Initial**: 1 day (on track)
+- **Content Block Extraction**: 1 day (completed)
 - **Average Daily Progress**: 15-20 story points
+- **Tests Written**: 33 total (averaging 10+ per day)
 
 ---
 
@@ -178,8 +205,10 @@
 ### Technical Achievements
 1. **Memory Management Success**: Solved OutOfMemoryError with file-based processing
 2. **Pattern Matching**: Successfully handling both clean and mangled text formats
-3. **Test-Driven Development**: Maintaining high test coverage throughout
-4. **Performance**: Exceeding all performance benchmarks
+3. **Content Extraction**: Intelligent categorization of medical content by type
+4. **Service Architecture**: Consolidated to single, efficient Flow-based service
+5. **Test-Driven Development**: Maintaining high test coverage throughout
+6. **Performance**: Exceeding all performance benchmarks
 
 ### Lessons Learned
 1. PDFBox Android has memory constraints requiring chunked processing

@@ -1,81 +1,69 @@
 # Next Steps for ClinicalAide Development
 
-**Last Updated**: August 18, 2025  
-**Current Focus**: Complete PDF Parsing Implementation
+**Last Updated**: August 21, 2025  
+**Current Focus**: Complete Full Document Processing
 
-## ✅ Recently Completed (August 18, 2025)
+## ✅ Recently Completed (August 18-21, 2025)
 1. ✅ Implemented FileBasedStgPdfParser with memory-efficient processing
 2. ✅ Fixed medication extraction patterns for multi-line formats
-3. ✅ Created comprehensive test suite (16 tests passing)
+3. ✅ Created comprehensive test suite (33 tests passing)
 4. ✅ Handled mangled text extraction issues
 5. ✅ Created sample PDFs for testing
+6. ✅ Implemented ContentBlockExtractor for structured content (August 21)
+7. ✅ Fixed database foreign key indices (August 21)
+8. ✅ Consolidated services - removed PdfToDatabaseService (August 21)
+9. ✅ Enhanced StgPdfProcessingService with content block processing (August 21)
+10. ✅ Added support for custom PDF filenames (August 21)
 
 ## Current Status
 ✅ **Database Implementation Complete** - 81 tests passing  
-🔄 **PDF Parsing Phase 1 Complete** - Parser working, 16 tests passing  
-⏳ **PDF Parsing Phase 2** - Full document processing next  
-⏳ **AI Integration** - After PDF parsing complete  
+✅ **PDF Parsing Core Complete** - Parser working with content extraction, 33 tests passing  
+✅ **Content Block Extraction Complete** - Intelligent categorization implemented  
+🔄 **Full Document Processing** - Ready to process all 708 pages  
+⏳ **AI Integration** - After full document processing  
 ⏳ **User Interface** - After core functionality  
 
-## Phase 2: Complete PDF Parsing (Priority - Week of Aug 19-23)
+## Phase 2: Complete Full Document Processing (Priority - Week of Aug 22-26)
 
 ### Immediate Tasks
 
-#### 1. Database Population Pipeline
-Create service to connect parser output to database:
+#### 1. ✅ Database Population Pipeline (COMPLETED August 21)
+- ✅ StgPdfProcessingService handles all database population
+- ✅ Maps ParsedChapter to StgChapter entity
+- ✅ Maps ParsedCondition to StgCondition entity with content blocks
+- ✅ Maps ParsedMedication to StgMedication entity
+- ✅ Content block categorization implemented
+- ✅ Batch insert for performance
 
-```kotlin
-// app/src/main/java/co/kobby/clinicalaide/data/pdf/
-class PdfToDatabaseService(
-    private val parser: FileBasedStgPdfParser,
-    private val dao: StgDao
-) {
-    suspend fun populateDatabase(pdfFileName: String) {
-        // Parse PDF and save to database
-    }
-}
-```
-
-**Tasks**:
-- [ ] Create PdfToDatabaseService class
-- [ ] Map ParsedChapter to StgChapter entity
-- [ ] Map ParsedCondition to StgCondition entity
-- [ ] Map ParsedMedication to StgMedication entity
-- [ ] Handle content block categorization
-- [ ] Implement batch insert for performance
-
-#### 2. Process Full Ghana STG Document
+#### 2. Process Full Ghana STG Document (NEXT PRIORITY)
 ```bash
 # Test with full document
 ./gradlew connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=FullDocumentParsingTest
 ```
 
 **Tasks**:
+- [ ] Create FullDocumentParsingTest
 - [ ] Process all 708 pages
 - [ ] Extract all 22 chapters
 - [ ] Verify chapter boundaries are correct
 - [ ] Handle special pages (appendices, glossary)
-- [ ] Generate parsing report
+- [ ] Generate parsing statistics report
+- [ ] Optimize for memory usage on full document
 
 #### 3. Enhanced Content Extraction
 
-**Condition Extraction Improvements**:
-- [ ] Improve numbered condition pattern matching
+**✅ Completed (August 21)**:
+- ✅ Content block categorization (10 types)
+- ✅ Smart section header detection
+- ✅ Content association with conditions
+- ✅ Ordering preservation
+
+**Still Pending**:
 - [ ] Extract ICD-10 codes where present
-- [ ] Link conditions to parent chapters
 - [ ] Handle sub-conditions and variants
-
-**Content Block Categorization**:
-- [ ] Identify block types (definition, symptoms, treatment, etc.)
-- [ ] Extract structured treatment protocols
-- [ ] Parse investigation requirements
-- [ ] Capture referral criteria
-
-**Medication Details**:
-- [ ] Extract complete dosing schedules
-- [ ] Capture route of administration
-- [ ] Note contraindications
-- [ ] Extract duration of treatment
+- [ ] Extract complete dosing schedules from tables
+- [ ] Capture route of administration details
+- [ ] Parse contraindications from structured sections
 
 #### 4. Table Extraction
 Many medications are in tabular format:

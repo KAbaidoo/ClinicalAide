@@ -4,7 +4,8 @@
 This document details the implementation of the PDF parsing system for the Ghana STG (Standard Treatment Guidelines) 7th Edition document. The parser extracts structured medical information from a 708-page PDF for use in the clinical chatbot application.
 
 ## Implementation Date
-August 18, 2025
+August 18, 2025 (Initial implementation)
+August 21, 2025 (Content block extraction added)
 
 ## Key Components Implemented
 
@@ -69,10 +70,29 @@ Comprehensive integration tests for the PDF parser:
 
 Specialized extractor for chapter and section information.
 
+#### ContentBlockExtractor (Added August 21, 2025)
+**Location**: `app/src/main/java/co/kobby/clinicalaide/data/pdf/extractors/ContentBlockExtractor.kt`
+
+Intelligent content categorization system that:
+- Detects 10 different content types (SYMPTOMS, TREATMENT, DOSAGE, etc.)
+- Uses pattern matching for Ghana STG section headers
+- Associates content with specific medical conditions
+- Maintains proper ordering within conditions
+
+Key features:
+- **Smart section detection**: Identifies headers like "Clinical Features:", "Treatment:", etc.
+- **Content preservation**: Maintains full text while categorizing by type
+- **Flexible patterns**: Handles variations in header formatting
+- **Metadata support**: Adds condition context to extracted blocks
+
 #### StgPdfProcessingService
 **Location**: `app/src/main/java/co/kobby/clinicalaide/data/pdf/StgPdfProcessingService.kt`
 
-Orchestrator service that manages the overall PDF processing workflow.
+Orchestrator service that manages the overall PDF processing workflow. Updated on August 21, 2025 to:
+- Process ParsedContentBlocks from conditions
+- Insert conditions first to obtain IDs for proper foreign key relationships
+- Use Flow-based streaming for memory efficiency
+- Support custom PDF filenames (not just hardcoded)
 
 ## Ghana STG Document Structure
 
@@ -134,7 +154,10 @@ Each condition typically includes:
 ## Performance Metrics
 
 ### Test Results (All Passing)
-- **Total Tests**: 16
+- **PDF Parser Tests**: 16 tests (100% passing)
+- **Content Block Extraction Tests**: 11 tests (100% passing) - Added August 21, 2025
+- **Integration Tests**: 6 tests (100% passing) - StgPdfProcessingServiceTest
+- **Total Tests**: 33
 - **Success Rate**: 100%
 - **Execution Time**: ~15 seconds for full test suite
 - **Memory Usage**: <50MB increase during processing
@@ -185,6 +208,20 @@ class FileBasedStgPdfParser(
 3. **Images**: Medical diagrams and flowcharts not processed
 4. **Cross-references**: Inter-chapter references not yet linked
 
+## Recent Improvements (August 21, 2025)
+
+### Content Block Extraction
+Successfully implemented structured content extraction that:
+- **Categorizes medical content** by type (symptoms, treatment, dosage, etc.)
+- **Associates content with specific conditions** instead of just chapters
+- **Enables filtered searches** by content type
+- **Maintains content ordering** for logical presentation
+
+### Service Consolidation
+- **Removed**: PdfToDatabaseService (redundant, memory-inefficient)
+- **Kept**: StgPdfProcessingService (Flow-based, production-ready)
+- **Benefits**: Single source of truth, better memory management, progress tracking
+
 ## Future Enhancements
 
 1. **Table Extraction**: Parse medication dosing tables
@@ -192,6 +229,7 @@ class FileBasedStgPdfParser(
 3. **Semantic Linking**: Connect related conditions across chapters
 4. **Validation Layer**: Verify extracted data against medical databases
 5. **Performance Optimization**: Further optimize for larger documents
+6. **Enhanced Content Detection**: Improve pattern matching for edge cases
 
 ## Dependencies
 
