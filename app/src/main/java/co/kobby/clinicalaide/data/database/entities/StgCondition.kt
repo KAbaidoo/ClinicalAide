@@ -13,6 +13,9 @@ import androidx.room.PrimaryKey
             childColumns = ["chapterId"],
             onDelete = ForeignKey.CASCADE
         )
+    ],
+    indices = [
+        androidx.room.Index(value = ["chapterId"])
     ]
 )
 data class StgCondition(

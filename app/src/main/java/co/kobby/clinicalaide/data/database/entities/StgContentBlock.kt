@@ -13,6 +13,9 @@ import androidx.room.PrimaryKey
             childColumns = ["conditionId"],
             onDelete = ForeignKey.CASCADE
         )
+    ],
+    indices = [
+        androidx.room.Index(value = ["conditionId"])
     ]
 )
 data class StgContentBlock(

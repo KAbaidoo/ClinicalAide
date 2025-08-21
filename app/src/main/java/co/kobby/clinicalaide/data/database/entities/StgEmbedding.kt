@@ -13,6 +13,9 @@ import androidx.room.PrimaryKey
             childColumns = ["contentBlockId"],
             onDelete = ForeignKey.CASCADE
         )
+    ],
+    indices = [
+        androidx.room.Index(value = ["contentBlockId"])
     ]
 )
 data class StgEmbedding(
