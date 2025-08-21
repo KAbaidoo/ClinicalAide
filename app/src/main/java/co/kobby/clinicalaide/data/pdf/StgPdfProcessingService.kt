@@ -36,8 +36,10 @@ class StgPdfProcessingService(
      * Main processing function that parses the STG PDF and stores content in database
      * Uses FileBasedStgPdfParser for memory-efficient processing
      * Returns a Flow to track progress
+     * 
+     * @param pdfFileName The name of the PDF file in assets folder (defaults to main STG PDF)
      */
-    fun processStgPdf(): Flow<ProcessingProgress> = flow {
+    fun processStgPdf(pdfFileName: String = STG_PDF_ASSET): Flow<ProcessingProgress> = flow {
         val parser = FileBasedStgPdfParser(context)
         
         try {
@@ -50,15 +52,15 @@ class StgPdfProcessingService(
             
             // Track chapters we've seen
             val processedChapters = mutableMapOf<Int, Long>() // chapterNumber to chapterId
+            val defaultConditions = mutableMapOf<Long, Long>() // chapterId to default conditionId
             var currentChapterId: Long? = null
             
             // Collections for batch processing
             val contentBlocks = mutableListOf<StgContentBlock>()
             val medications = mutableListOf<StgMedication>()
-            val conditions = mutableListOf<StgCondition>()
             
             // Process the PDF in chunks
-            parser.processStgPdf(STG_PDF_ASSET).collect { result ->
+            parser.processStgPdf(pdfFileName).collect { result ->
                 // Emit progress
                 emit(ProcessingProgress(
                     currentPage = result.currentPage,
@@ -71,7 +73,7 @@ class StgPdfProcessingService(
                 if (result.chapter != null && !processedChapters.containsKey(result.chapter.chapterNumber)) {
                     // Insert new chapter
                     currentChapterId = withContext(Dispatchers.IO) {
-                        dao.insertChapter(
+                        val chapterId = dao.insertChapter(
                             StgChapter(
                                 chapterNumber = result.chapter.chapterNumber,
                                 chapterTitle = result.chapter.title,
@@ -80,6 +82,21 @@ class StgPdfProcessingService(
                                 description = "Chapter ${result.chapter.chapterNumber} of Ghana STG"
                             )
                         )
+                        
+                        // Create a default condition for general content in this chapter
+                        val defaultConditionId = dao.insertCondition(
+                            StgCondition(
+                                chapterId = chapterId,
+                                conditionNumber = 0,
+                                conditionName = "General Content - ${result.chapter.title}",
+                                startPage = result.chapter.startPage,
+                                endPage = result.chapter.endPage ?: result.totalPages,
+                                keywords = "general,content,${result.chapter.title.lowercase()}"
+                            )
+                        )
+                        defaultConditions[chapterId] = defaultConditionId
+                        
+                        chapterId
                     }
                     processedChapters[result.chapter.chapterNumber] = currentChapterId!!
                     
@@ -88,69 +105,90 @@ class StgPdfProcessingService(
                     currentChapterId = processedChapters[result.chapter.chapterNumber]
                 }
                 
-                // Process conditions from this chunk
+                // Process conditions from this chunk with their content blocks
                 result.conditions.forEach { parsedCondition ->
                     if (currentChapterId != null) {
-                        conditions.add(
-                            StgCondition(
-                                chapterId = currentChapterId!!,
-                                conditionNumber = 0, // Will be properly numbered later
-                                conditionName = parsedCondition.name,
-                                startPage = result.currentPage,
-                                endPage = result.currentPage,
-                                keywords = extractKeywords(parsedCondition.name)
+                        // Insert the condition first
+                        val conditionId = withContext(Dispatchers.IO) {
+                            dao.insertCondition(
+                                StgCondition(
+                                    chapterId = currentChapterId!!,
+                                    conditionNumber = 0, // Will be properly numbered later
+                                    conditionName = parsedCondition.name,
+                                    startPage = parsedCondition.pageNumber,
+                                    endPage = parsedCondition.pageNumber,
+                                    keywords = extractKeywords(parsedCondition.name)
+                                )
                             )
-                        )
-                    }
-                }
-                
-                // Store chunk text as content block if we have a chapter
-                if (currentChapterId != null && result.text.isNotEmpty()) {
-                    // For now, associate with chapter until we have condition IDs
-                    // In production, we'd parse conditions first then associate content
-                    contentBlocks.add(
-                        StgContentBlock(
-                            conditionId = currentChapterId!!, // Using chapter ID temporarily
-                            blockType = ContentType.DEFINITION.name,
-                            content = result.text.take(5000), // Limit content size
-                            pageNumber = result.currentPage,
-                            orderInCondition = 0,
-                            keywords = extractKeywords(result.text)
-                        )
-                    )
-                }
-                
-                // Process medications from this chunk
-                result.medications.forEach { parsedMedication ->
-                    if (currentChapterId != null) {
-                        medications.add(
-                            StgMedication(
-                                conditionId = currentChapterId!!, // Using chapter ID temporarily
-                                medicationName = parsedMedication.name,
-                                dosage = parsedMedication.dosage ?: "",
-                                frequency = parsedMedication.frequency ?: "",
-                                duration = parsedMedication.duration ?: "",
-                                route = parsedMedication.route ?: "oral",
-                                ageGroup = "adult",
-                                weightBased = false,
-                                contraindications = parsedMedication.contraindications?.joinToString(";"),
-                                sideEffects = parsedMedication.sideEffects?.joinToString(";"),
-                                evidenceLevel = null,
-                                pageNumber = result.currentPage
-                            )
-                        )
-                    }
-                }
-                
-                // Batch insert when collections reach threshold
-                if (conditions.size >= BATCH_SIZE) {
-                    withContext(Dispatchers.IO) {
-                        conditions.forEach { condition ->
-                            dao.insertCondition(condition)
                         }
-                        conditions.clear()
+                        
+                        // Process content blocks for this condition
+                        parsedCondition.contentBlocks.forEach { parsedBlock ->
+                            contentBlocks.add(
+                                StgContentBlock(
+                                    conditionId = conditionId,
+                                    blockType = parsedBlock.contentType.name,
+                                    content = parsedBlock.content,
+                                    pageNumber = parsedCondition.pageNumber,
+                                    orderInCondition = parsedBlock.orderInCondition,
+                                    keywords = extractKeywords(parsedBlock.content)
+                                )
+                            )
+                        }
+                        
+                        // Process medications for this condition
+                        parsedCondition.medications.forEach { parsedMedication ->
+                            medications.add(
+                                StgMedication(
+                                    conditionId = conditionId,
+                                    medicationName = parsedMedication.name,
+                                    dosage = parsedMedication.dosage ?: "",
+                                    frequency = "",
+                                    duration = "",
+                                    route = "oral",
+                                    ageGroup = "adult",
+                                    weightBased = false,
+                                    contraindications = null,
+                                    sideEffects = null,
+                                    evidenceLevel = null,
+                                    pageNumber = parsedCondition.pageNumber
+                                )
+                            )
+                        }
                     }
                 }
+                
+                // Note: Raw chunk text is no longer stored as content blocks
+                // Content blocks are now extracted from specific conditions with proper categorization
+                
+                // Process standalone medications (not associated with specific conditions)
+                // These will be associated with the default condition for the chapter
+                if (result.medications.isNotEmpty() && currentChapterId != null) {
+                    val defaultConditionId = defaultConditions[currentChapterId]
+                    if (defaultConditionId != null) {
+                        result.medications.forEach { parsedMedication ->
+                            medications.add(
+                                StgMedication(
+                                    conditionId = defaultConditionId,
+                                    medicationName = parsedMedication.name,
+                                    dosage = parsedMedication.dosage ?: "",
+                                    frequency = "",
+                                    duration = "",
+                                    route = "oral",
+                                    ageGroup = "adult",
+                                    weightBased = false,
+                                    contraindications = null,
+                                    sideEffects = null,
+                                    evidenceLevel = null,
+                                    pageNumber = result.currentPage
+                                )
+                            )
+                        }
+                    }
+                }
+                
+                // Note: Conditions are now inserted immediately to get IDs for content blocks
+                // Batch processing is done for content blocks and medications only
                 
                 if (contentBlocks.size >= BATCH_SIZE) {
                     withContext(Dispatchers.IO) {
@@ -169,9 +207,6 @@ class StgPdfProcessingService(
             
             // Insert any remaining data
             withContext(Dispatchers.IO) {
-                if (conditions.isNotEmpty()) {
-                    conditions.forEach { dao.insertCondition(it) }
-                }
                 if (contentBlocks.isNotEmpty()) {
                     dao.insertContentBlocks(contentBlocks)
                 }
