@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import co.kobby.clinicalaide.data.pdf.models.ParsedCondition
 import co.kobby.clinicalaide.data.pdf.models.ParsedMedication
+import co.kobby.clinicalaide.data.pdf.models.ParsedContentBlock
+import co.kobby.clinicalaide.data.pdf.extractors.ContentBlockExtractor
 import com.tom_roush.pdfbox.io.RandomAccessBufferedFileInputStream
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
@@ -26,6 +28,7 @@ class FileBasedStgPdfParser(
     private val context: Context,
     private val chunkSize: Int = DEFAULT_CHUNK_SIZE
 ) {
+    private val contentBlockExtractor = ContentBlockExtractor()
     
     companion object {
         private const val TAG = "FileBasedParser"
@@ -287,22 +290,62 @@ class FileBasedStgPdfParser(
         }
     
     /**
-     * Extract conditions from text
+     * Extract conditions from text with their content blocks
      */
     private fun extractConditions(text: String): List<ParsedCondition> {
         val conditions = mutableListOf<ParsedCondition>()
         val conditionPattern = Regex("""^\s*(\d+)\.\s+([A-Za-z][A-Za-z\s]+)""")
         
-        text.lines().forEach { line ->
+        // Split text into potential condition sections
+        val lines = text.lines()
+        var currentConditionName: String? = null
+        var currentConditionText = StringBuilder()
+        var currentPageNumber = 0
+        
+        for ((index, line) in lines.withIndex()) {
             val match = conditionPattern.find(line)
+            
             if (match != null && match.groupValues[2].trim().length > 3) {
-                conditions.add(
-                    ParsedCondition(
-                        name = match.groupValues[2].trim(),
-                        pageNumber = 0
+                // Found a new condition - save the previous one if exists
+                if (currentConditionName != null && currentConditionText.isNotEmpty()) {
+                    val contentBlocks = contentBlockExtractor.extractConditionContentBlocks(
+                        currentConditionName,
+                        currentConditionText.toString()
                     )
-                )
+                    
+                    conditions.add(
+                        ParsedCondition(
+                            name = currentConditionName,
+                            pageNumber = currentPageNumber,
+                            contentBlocks = contentBlocks
+                        )
+                    )
+                }
+                
+                // Start new condition
+                currentConditionName = match.groupValues[2].trim()
+                currentConditionText = StringBuilder()
+                currentPageNumber = 0 // Will be set properly in actual usage
+            } else if (currentConditionName != null) {
+                // Add line to current condition content
+                currentConditionText.append(line).append("\n")
             }
+        }
+        
+        // Save last condition
+        if (currentConditionName != null && currentConditionText.isNotEmpty()) {
+            val contentBlocks = contentBlockExtractor.extractConditionContentBlocks(
+                currentConditionName,
+                currentConditionText.toString()
+            )
+            
+            conditions.add(
+                ParsedCondition(
+                    name = currentConditionName,
+                    pageNumber = currentPageNumber,
+                    contentBlocks = contentBlocks
+                )
+            )
         }
         
         return conditions
