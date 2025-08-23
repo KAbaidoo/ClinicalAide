@@ -1,558 +1,335 @@
-# Ghana STG Database Schema
+# Ghana STG RAG Database Schema
 
-## Core Database Structure
+## Database Overview
 
-This document outlines the complete database schema for the Ghana STG Clinical Chatbot application. The schema is designed to support hierarchical medical content, semantic search, and offline functionality.
+The RAG-ready database (`stg_rag.db`) contains 969 content chunks from the Ghana STG with complete citation support for medical queries. This database was created through OCR extraction and is optimized for Retrieval-Augmented Generation (RAG) with offline AI models.
 
-## Entity Relationship Overview
+### Database Statistics
+- **31 chapters** with titles and page ranges
+- **304 medical conditions** with references
+- **555 medications** with dosages
+- **969 content chunks** for RAG retrieval
+- **Full citations** for every piece of content
+- **Database size**: 598KB (optimized for mobile)
+
+## Architecture Overview
 
 ```
-StgChapter (1) ──────── (Many) StgCondition
-                                    │
-                                    │ (1)
-                                    │
-                                    │ (Many)
-                              StgContentBlock ──── (1) StgEmbedding
-                                    │
-                                    │ (1)
-                                    │
-                                    │ (Many)
-                              StgMedication
+chapters (31) ──────── conditions_enhanced (304)
+                              │
+                              │
+                       content_chunks (969) ─── embeddings (future)
+                              │
+                              │
+                       medications_enhanced (555)
 ```
 
 ## Table Definitions
 
-### Core Entities
+### 1. chapters
+Document structure and navigation for the Ghana STG.
 
-#### StgChapter
-Represents major medical system categories from the Ghana STG document.
-
-```kotlin
-@Entity(tableName = "stg_chapters")
-data class StgChapter(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val chapterNumber: Int,
-    val chapterTitle: String,
-    val startPage: Int,
-    val endPage: Int,
-    val description: String? = null
-)
+```sql
+CREATE TABLE chapters (
+    id INTEGER PRIMARY KEY NOT NULL,
+    number INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    start_page INTEGER NOT NULL
+);
 ```
 
 **Sample Data:**
 ```
-id=1, chapterNumber=1, chapterTitle="Disorders of the Gastrointestinal Tract", startPage=29, endPage=57
-id=2, chapterNumber=2, chapterTitle="Disorders of the Liver", startPage=58, endPage=85
+id=1, number=1, title="Cardiovascular System", start_page=15
+id=18, number=18, title="Infectious Diseases", start_page=482
 ```
 
-#### StgCondition
-Individual medical conditions within each chapter.
-
+**Room Entity:**
 ```kotlin
-@Entity(
-    tableName = "stg_conditions",
-    foreignKeys = [
-        ForeignKey(
-            entity = StgChapter::class,
-            parentColumns = ["id"],
-            childColumns = ["chapterId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ]
-)
-data class StgCondition(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val chapterId: Long,
-    val conditionNumber: Int, // e.g., 1 for "Diarrhoea"
-    val conditionName: String, // e.g., "Diarrhoea"
-    val startPage: Int,
-    val endPage: Int,
-    val keywords: String // JSON array of searchable terms
-)
-```
-
-**Sample Data:**
-```
-id=1, chapterId=1, conditionNumber=1, conditionName="Diarrhoea", startPage=29, endPage=32
-id=2, chapterId=1, conditionNumber=2, conditionName="Rotavirus Disease", startPage=33, endPage=35
-```
-
-#### StgContentBlock
-Structured content sections for each medical condition.
-
-```kotlin
-@Entity(
-    tableName = "stg_content_blocks",
-    foreignKeys = [
-        ForeignKey(
-            entity = StgCondition::class,
-            parentColumns = ["id"],
-            childColumns = ["conditionId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ]
-)
-data class StgContentBlock(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val conditionId: Long,
-    val blockType: String, // "definition", "causes", "symptoms", "treatment", "dosage", "referral", "contraindications"
-    val content: String,
-    val pageNumber: Int,
-    val orderInCondition: Int, // Sequence within condition
-    val clinicalContext: String = "general", // "pediatric", "adult", "pregnancy", "elderly", "emergency"
-    val severityLevel: String? = null, // "mild", "moderate", "severe"
-    val evidenceLevel: String? = null, // "A", "B", "C"
-    val keywords: String, // Extracted key medical terms for better matching
-    val relatedBlockIds: String = "[]", // JSON array of related block IDs
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
-)
-```
-
-**Block Types:**
-- `definition`: Medical definition and description
-- `causes`: Etiology and risk factors
-- `symptoms`: Clinical presentation and signs
-- `treatment`: Therapeutic interventions
-- `dosage`: Specific medication dosing
-- `referral`: When and where to refer patients
-- `contraindications`: When not to use treatments
-- `diagnosis`: Diagnostic criteria and methods
-
-**Clinical Contexts:**
-- `general`: Applies to all patient populations
-- `pediatric`: Children and adolescents
-- `adult`: Adult population
-- `pregnancy`: Pregnant women
-- `elderly`: Geriatric population
-- `neonatal`: Newborns (0-28 days)
-- `emergency`: Emergency/urgent care scenarios
-
-#### StgEmbedding
-Vector embeddings for semantic search functionality.
-
-```kotlin
-@Entity(
-    tableName = "stg_embeddings",
-    foreignKeys = [
-        ForeignKey(
-            entity = StgContentBlock::class,
-            parentColumns = ["id"],
-            childColumns = ["contentBlockId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ]
-)
-data class StgEmbedding(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val contentBlockId: Long,
-    val embedding: String, // JSON string of the vector embedding
-    val embeddingModel: String, // "text-embedding-004", "universal-sentence-encoder", etc.
-    val embeddingDimensions: Int = 768, // Track vector size
-    val createdAt: Long = System.currentTimeMillis()
-)
-```
-
-### Supporting Entities
-
-#### StgMedication
-Detailed medication information extracted from treatment protocols.
-
-```kotlin
-@Entity(
-    tableName = "stg_medications",
-    foreignKeys = [
-        ForeignKey(
-            entity = StgCondition::class,
-            parentColumns = ["id"],
-            childColumns = ["conditionId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ]
-)
-data class StgMedication(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val conditionId: Long,
-    val medicationName: String,
-    val dosage: String,
-    val frequency: String,
-    val duration: String,
-    val route: String, // "oral", "IV", "IM", "topical", etc.
-    val ageGroup: String, // "adult", "pediatric", "neonatal", "elderly"
-    val weightBased: Boolean = false, // true if dose is per kg
-    val contraindications: String? = null,
-    val sideEffects: String? = null,
-    val evidenceLevel: String? = null,
-    val pageNumber: Int
-)
-```
-
-**Sample Data:**
-```
-medicationName="Oral Rehydration Solution (ORS)"
-dosage="75ml/kg"
-frequency="over 4 hours"
-duration="until rehydrated"
-route="oral"
-ageGroup="pediatric"
-weightBased=true
-```
-
-#### StgCrossReference
-Relationships between different medical conditions.
-
-```kotlin
-@Entity(tableName = "stg_cross_references")
-data class StgCrossReference(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val fromConditionId: Long,
-    val toConditionId: Long,
-    val referenceType: String, // "see_also", "differential", "complication", "prerequisite"
-    val description: String? = null
-)
-```
-
-**Reference Types:**
-- `see_also`: Related conditions for additional reference
-- `differential`: Conditions to consider in differential diagnosis
-- `complication`: Potential complications of the condition
-- `prerequisite`: Conditions that must be ruled out first
-
-#### StgSearchCache
-Performance optimization for frequently searched queries.
-
-```kotlin
-@Entity(tableName = "stg_search_cache")
-data class StgSearchCache(
+@Entity(tableName = "chapters")
+data class Chapter(
     @PrimaryKey
-    val queryHash: String,
-    val results: String, // JSON string of search results
-    val timestamp: Long = System.currentTimeMillis(),
-    val hitCount: Int = 1
+    val id: Int,
+    @ColumnInfo(name = "number")
+    val number: Int,
+    @ColumnInfo(name = "title") 
+    val title: String,
+    @ColumnInfo(name = "start_page")
+    val startPage: Int
 )
 ```
 
-## Data Access Objects (DAOs)
+### 2. content_chunks
+RAG-ready content chunks with full citation support. This is the core table for semantic search and AI response generation.
 
-### Primary DAO Interface
+```sql
+CREATE TABLE content_chunks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    content TEXT NOT NULL,
+    chunk_type TEXT NOT NULL,
+    source_id INTEGER,
+    chapter_number INTEGER,
+    chapter_title TEXT,
+    section_number TEXT,
+    page_number INTEGER NOT NULL,
+    condition_name TEXT,
+    reference_citation TEXT NOT NULL,
+    metadata TEXT,
+    embedding BLOB,
+    created_at TEXT
+);
+```
+
+**Chunk Types:**
+- `treatment` - Treatment protocols and guidelines
+- `clinical_features` - Signs and symptoms
+- `investigation` - Diagnostic procedures
+- `medication` - Drug information and dosing
+- `general` - Other medical content
+
+**Sample Data:**
+```
+id=1
+content="For uncomplicated malaria in adults: Artemether-Lumefantrine..."
+chunk_type="treatment"
+page_number=483
+condition_name="Malaria"
+reference_citation="Ghana STG 2017 - Chapter 18, Section 187, Page 483"
+```
+
+**Room Entity:**
+```kotlin
+@Entity(tableName = "content_chunks")
+data class ContentChunk(
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
+    @ColumnInfo(name = "content")
+    val content: String,
+    @ColumnInfo(name = "chunk_type")
+    val chunkType: String,
+    @ColumnInfo(name = "source_id")
+    val sourceId: Int?,
+    @ColumnInfo(name = "chapter_number")
+    val chapterNumber: Int?,
+    @ColumnInfo(name = "chapter_title")
+    val chapterTitle: String?,
+    @ColumnInfo(name = "section_number")
+    val sectionNumber: String?,
+    @ColumnInfo(name = "page_number")
+    val pageNumber: Int,
+    @ColumnInfo(name = "condition_name")
+    val conditionName: String?,
+    @ColumnInfo(name = "reference_citation")
+    val referenceCitation: String,
+    @ColumnInfo(name = "metadata")
+    val metadata: String?,
+    @ColumnInfo(name = "embedding", typeAffinity = ColumnInfo.BLOB)
+    val embedding: ByteArray? = null,
+    @ColumnInfo(name = "created_at")
+    val createdAt: String?
+)
+```
+
+### 3. conditions_enhanced
+Medical conditions with complete references extracted via OCR.
+
+```sql
+CREATE TABLE conditions_enhanced (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    name TEXT NOT NULL,
+    chapter_number INTEGER,
+    section_number TEXT,
+    page_number INTEGER NOT NULL,
+    clinical_features TEXT,
+    investigations TEXT,
+    treatment TEXT,
+    reference_citation TEXT,
+    ocr_source INTEGER NOT NULL DEFAULT 1
+);
+```
+
+**Sample Data:**
+```
+id=1, name="Malaria", chapter_number=18, page_number=483
+id=2, name="Hypertension", chapter_number=1, page_number=25
+```
+
+**Room Entity:**
+```kotlin
+@Entity(tableName = "conditions_enhanced")
+data class ConditionEnhanced(
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
+    @ColumnInfo(name = "name")
+    val name: String,
+    @ColumnInfo(name = "chapter_number")
+    val chapterNumber: Int?,
+    @ColumnInfo(name = "section_number")
+    val sectionNumber: String?,
+    @ColumnInfo(name = "page_number")
+    val pageNumber: Int,
+    @ColumnInfo(name = "clinical_features")
+    val clinicalFeatures: String?,
+    @ColumnInfo(name = "investigations")
+    val investigations: String?,
+    @ColumnInfo(name = "treatment")
+    val treatment: String?,
+    @ColumnInfo(name = "reference_citation")
+    val referenceCitation: String?,
+    @ColumnInfo(name = "ocr_source")
+    val ocrSource: Boolean = true
+)
+```
+
+### 4. medications_enhanced
+Medication information with dosing details extracted via OCR.
+
+```sql
+CREATE TABLE medications_enhanced (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    generic_name TEXT NOT NULL,
+    chapter_number INTEGER,
+    section_number TEXT,
+    page_number INTEGER NOT NULL,
+    strength TEXT,
+    route TEXT,
+    dosage_info TEXT,
+    reference_citation TEXT,
+    ocr_source INTEGER NOT NULL DEFAULT 1
+);
+```
+
+**Sample Data:**
+```
+id=1, generic_name="Artemether-Lumefantrine", strength="20mg/120mg", route="Oral"
+id=2, generic_name="Paracetamol", strength="500mg", route="Oral"
+```
+
+**Room Entity:**
+```kotlin
+@Entity(tableName = "medications_enhanced")
+data class MedicationEnhanced(
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
+    @ColumnInfo(name = "generic_name")
+    val genericName: String,
+    @ColumnInfo(name = "chapter_number")
+    val chapterNumber: Int?,
+    @ColumnInfo(name = "section_number")
+    val sectionNumber: String?,
+    @ColumnInfo(name = "page_number")
+    val pageNumber: Int,
+    @ColumnInfo(name = "strength")
+    val strength: String?,
+    @ColumnInfo(name = "route")
+    val route: String?,
+    @ColumnInfo(name = "dosage_info")
+    val dosageInfo: String?,
+    @ColumnInfo(name = "reference_citation")
+    val referenceCitation: String?,
+    @ColumnInfo(name = "ocr_source")
+    val ocrSource: Boolean = true
+)
+```
+
+### 5. embeddings (Future Implementation)
+Vector embeddings for semantic similarity search.
+
+```sql
+CREATE TABLE embeddings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    chunk_id INTEGER NOT NULL,
+    embedding BLOB NOT NULL,
+    model_name TEXT DEFAULT 'universal-sentence-encoder',
+    dimension INTEGER DEFAULT 512,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (chunk_id) REFERENCES content_chunks(id)
+);
+```
+
+## Database Access Object (DAO)
 
 ```kotlin
 @Dao
-interface StgDao {
+interface RagDao {
+    // Search operations
+    @Query("SELECT * FROM content_chunks WHERE content LIKE '%' || :query || '%' LIMIT :limit")
+    suspend fun searchContentChunks(query: String, limit: Int = 10): List<ContentChunk>
     
-    // Chapter operations
-    @Query("SELECT * FROM stg_chapters ORDER BY chapterNumber")
-    suspend fun getAllChapters(): List<StgChapter>
+    @Query("SELECT * FROM conditions_enhanced WHERE name LIKE '%' || :query || '%' LIMIT :limit")
+    suspend fun searchConditions(query: String, limit: Int = 10): List<ConditionEnhanced>
     
-    @Query("SELECT * FROM stg_chapters WHERE id = :chapterId")
-    suspend fun getChapterById(chapterId: Long): StgChapter?
+    @Query("SELECT * FROM medications_enhanced WHERE generic_name LIKE '%' || :query || '%' LIMIT :limit")
+    suspend fun searchMedications(query: String, limit: Int = 10): List<MedicationEnhanced>
     
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertChapter(chapter: StgChapter): Long
-    
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertChapters(chapters: List<StgChapter>)
-    
-    // Condition operations
-    @Query("SELECT * FROM stg_conditions WHERE chapterId = :chapterId ORDER BY conditionNumber")
-    suspend fun getConditionsByChapter(chapterId: Long): List<StgCondition>
-    
-    @Query("SELECT * FROM stg_conditions WHERE conditionName LIKE '%' || :searchTerm || '%'")
-    suspend fun searchConditions(searchTerm: String): List<StgCondition>
-    
-    @Query("SELECT * FROM stg_conditions WHERE id = :conditionId")
-    suspend fun getConditionById(conditionId: Long): StgCondition?
-    
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertCondition(condition: StgCondition): Long
-    
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertConditions(conditions: List<StgCondition>)
-    
-    // Content block operations
+    // Statistics
     @Query("""
-        SELECT * FROM stg_content_blocks 
-        WHERE conditionId = :conditionId 
-        ORDER BY orderInCondition
+        SELECT 
+            (SELECT COUNT(*) FROM chapters) as chapterCount,
+            (SELECT COUNT(*) FROM content_chunks) as chunkCount,
+            (SELECT COUNT(*) FROM conditions_enhanced) as conditionCount,
+            (SELECT COUNT(*) FROM medications_enhanced) as medicationCount
     """)
-    suspend fun getContentBlocksByCondition(conditionId: Long): List<StgContentBlock>
-    
-    @Query("""
-        SELECT * FROM stg_content_blocks 
-        WHERE conditionId = :conditionId AND blockType = :blockType
-        ORDER BY orderInCondition
-    """)
-    suspend fun getContentBlocksByType(conditionId: Long, blockType: String): List<StgContentBlock>
-    
-    @Query("""
-        SELECT cb.* FROM stg_content_blocks cb
-        WHERE cb.clinicalContext = :context OR cb.clinicalContext = 'general'
-        ORDER BY cb.id
-    """)
-    suspend fun getContentBlocksByContext(context: String): List<StgContentBlock>
-    
-    @Query("SELECT * FROM stg_content_blocks WHERE id IN (:blockIds)")
-    suspend fun getContentBlocksByIds(blockIds: List<Long>): List<StgContentBlock>
-    
-    @Query("SELECT * FROM stg_content_blocks")
-    suspend fun getAllContentBlocks(): List<StgContentBlock>
-    
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertContentBlock(contentBlock: StgContentBlock): Long
-    
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertContentBlocks(contentBlocks: List<StgContentBlock>)
-    
-    // Embedding operations
-    @Query("SELECT * FROM stg_embeddings WHERE contentBlockId = :contentBlockId")
-    suspend fun getEmbeddingByContentBlock(contentBlockId: Long): StgEmbedding?
-    
-    @Query("SELECT * FROM stg_embeddings")
-    suspend fun getAllEmbeddings(): List<StgEmbedding>
-    
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertEmbedding(embedding: StgEmbedding): Long
-    
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertEmbeddings(embeddings: List<StgEmbedding>)
-    
-    // Complex queries for context building
-    @Query("""
-        SELECT cb.*, c.conditionName, ch.chapterTitle 
-        FROM stg_content_blocks cb
-        JOIN stg_conditions c ON cb.conditionId = c.id
-        JOIN stg_chapters ch ON c.chapterId = ch.id
-        WHERE cb.id IN (:blockIds)
-        ORDER BY cb.conditionId, cb.orderInCondition
-    """)
-    suspend fun getContentBlocksWithMetadata(blockIds: List<Long>): List<ContentBlockWithMetadata>
-    
-    // Medication operations
-    @Query("""
-        SELECT * FROM stg_medications 
-        WHERE conditionId = :conditionId AND ageGroup = :ageGroup
-    """)
-    suspend fun getMedicationsByConditionAndAge(conditionId: Long, ageGroup: String): List<StgMedication>
-    
-    @Query("SELECT * FROM stg_medications WHERE conditionId = :conditionId")
-    suspend fun getMedicationsByCondition(conditionId: Long): List<StgMedication>
-    
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertMedication(medication: StgMedication): Long
-    
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertMedications(medications: List<StgMedication>)
-    
-    // Cross-reference operations
-    @Query("SELECT * FROM stg_cross_references WHERE fromConditionId = :conditionId")
-    suspend fun getCrossReferencesByCondition(conditionId: Long): List<StgCrossReference>
-    
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertCrossReference(crossReference: StgCrossReference): Long
-    
-    // Search cache operations
-    @Query("SELECT * FROM stg_search_cache WHERE queryHash = :hash")
-    suspend fun getCachedSearch(hash: String): StgSearchCache?
-    
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun cacheSearch(cache: StgSearchCache)
-    
-    @Query("DELETE FROM stg_search_cache WHERE timestamp < :cutoffTime")
-    suspend fun clearOldCache(cutoffTime: Long)
-    
-    // Full-text search as backup to semantic search
-    @Query("""
-        SELECT * FROM stg_content_blocks 
-        WHERE content LIKE '%' || :searchTerm || '%' 
-        OR keywords LIKE '%' || :searchTerm || '%'
-        ORDER BY 
-            CASE WHEN content LIKE :searchTerm || '%' THEN 1 ELSE 2 END,
-            LENGTH(content)
-        LIMIT :limit
-    """)
-    suspend fun searchContentByText(searchTerm: String, limit: Int = 10): List<StgContentBlock>
+    suspend fun getDatabaseStats(): DatabaseStats
 }
 ```
 
-## Database Configuration
+## Schema Compatibility Notes
 
-### Room Database Class
+### Room Database Requirements
+The following schema modifications were required for Room compatibility:
 
+1. **Primary Keys**: All PRIMARY KEY fields must have explicit `NOT NULL` constraint
+2. **Boolean Fields**: SQLite BOOLEAN mapped to INTEGER NOT NULL with default value
+3. **Timestamps**: Changed from TIMESTAMP to TEXT for Room compatibility
+4. **Indices**: Removed database-level indices (can be added via Room annotations if needed)
+
+### Migration from Old Schema
+The project migrated from the original StgDatabase schema to this RAG-optimized schema:
+- Old: StgChapter, StgCondition, StgContentBlock entities
+- New: Simplified RAG schema with content_chunks as the core table
+- Benefit: Better suited for semantic search and AI response generation
+
+## Query Examples
+
+### Search for Medical Content
 ```kotlin
-@Database(
-    entities = [
-        StgChapter::class,
-        StgCondition::class,
-        StgContentBlock::class,
-        StgEmbedding::class,
-        StgMedication::class,
-        StgCrossReference::class,
-        StgSearchCache::class
-    ],
-    version = 1,
-    exportSchema = false
-)
-@TypeConverters(Converters::class)
-abstract class StgDatabase : RoomDatabase() {
-    abstract fun stgDao(): StgDao
-    
-    companion object {
-        @Volatile
-        private var INSTANCE: StgDatabase? = null
-        
-        fun getDatabase(context: Context): StgDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    StgDatabase::class.java,
-                    "stg_database"
-                )
-                .fallbackToDestructiveMigration() // For development
-                .enableMultiInstanceInvalidation()
-                .build()
-                INSTANCE = instance
-                instance
-            }
-        }
-    }
+// Search for malaria treatment
+val results = ragDao.searchContentChunks("malaria treatment", limit = 5)
+
+// Each result includes:
+// - content: The actual medical information
+// - referenceCitation: "Ghana STG 2017 - Chapter 18, Page 483"
+// - chunkType: "treatment"
+```
+
+### Get Database Statistics
+```kotlin
+val stats = ragDao.getDatabaseStats()
+// Returns: chapterCount=31, chunkCount=969, conditionCount=304, medicationCount=555
+```
+
+### Full-Text Search with Citations
+```kotlin
+val chunks = ragDao.fullTextSearch("hypertension management")
+chunks.forEach { chunk ->
+    println("${chunk.content}")
+    println("Source: ${chunk.referenceCitation}")
 }
 ```
 
-### Type Converters
+## Performance Characteristics
 
-```kotlin
-class Converters {
-    private val gson = Gson()
-    
-    @TypeConverter
-    fun fromStringList(value: List<String>): String {
-        return gson.toJson(value)
-    }
-    
-    @TypeConverter
-    fun toStringList(value: String): List<String> {
-        return gson.fromJson(value, object : TypeToken<List<String>>() {}.type)
-    }
-    
-    @TypeConverter
-    fun fromLongList(value: List<Long>): String {
-        return gson.toJson(value)
-    }
-    
-    @TypeConverter
-    fun toLongList(value: String): List<Long> {
-        return gson.fromJson(value, object : TypeToken<List<Long>>() {}.type)
-    }
-    
-    @TypeConverter
-    fun fromFloatArray(value: FloatArray): String {
-        return gson.toJson(value)
-    }
-    
-    @TypeConverter
-    fun toFloatArray(value: String): FloatArray {
-        return gson.fromJson(value, FloatArray::class.java)
-    }
-}
-```
+- **Database Size**: 598KB (optimized for mobile devices)
+- **Search Performance**: Sub-second response for text searches
+- **Memory Usage**: Efficient chunking prevents loading entire document
+- **Offline Capability**: 100% offline functionality
+- **Citation Coverage**: Every piece of content has verifiable page references
 
-## Data Transfer Objects
+## Future Enhancements
 
-### Complex Query Results
-
-```kotlin
-data class ContentBlockWithMetadata(
-    @Embedded val contentBlock: StgContentBlock,
-    val conditionName: String,
-    val chapterTitle: String
-)
-
-data class ConditionWithChapter(
-    @Embedded val condition: StgCondition,
-    val chapterTitle: String
-)
-
-data class MedicationWithCondition(
-    @Embedded val medication: StgMedication,
-    val conditionName: String,
-    val chapterTitle: String
-)
-```
-
-### Context Building Objects
-
-```kotlin
-data class LLMContext(
-    val primaryContent: List<ContentBlockWithMetadata>,
-    val supportingContent: List<ContentBlockWithMetadata>,
-    val medications: List<StgMedication>,
-    val clinicalMetadata: ClinicalMetadata,
-    val citations: List<Citation>
-)
-
-data class ClinicalMetadata(
-    val conditions: List<String>,
-    val chapters: List<String>,
-    val patientContext: String,
-    val evidenceLevels: List<String>,
-    val severityLevels: List<String>
-)
-
-data class Citation(
-    val pageNumber: Int,
-    val chapterTitle: String,
-    val conditionName: String,
-    val contentType: String
-)
-```
-
-## Database Indices
-
-For optimal query performance, create the following indices:
-
-```sql
--- Content search optimization
-CREATE INDEX idx_content_blocks_condition_type ON stg_content_blocks(conditionId, blockType);
-CREATE INDEX idx_content_blocks_context ON stg_content_blocks(clinicalContext);
-CREATE INDEX idx_content_blocks_keywords ON stg_content_blocks(keywords);
-
--- Embedding search optimization
-CREATE INDEX idx_embeddings_content_block ON stg_embeddings(contentBlockId);
-
--- Medication search optimization
-CREATE INDEX idx_medications_condition_age ON stg_medications(conditionId, ageGroup);
-
--- Cross-reference optimization
-CREATE INDEX idx_cross_references_from ON stg_cross_references(fromConditionId);
-
--- Search cache optimization
-CREATE INDEX idx_search_cache_timestamp ON stg_search_cache(timestamp);
-```
-
-## Data Validation Rules
-
-### Content Block Validation
-- `blockType` must be one of the predefined types
-- `clinicalContext` must be one of the predefined contexts
-- `content` must not be empty
-- `pageNumber` must be > 0
-- `orderInCondition` must be > 0
-
-### Medication Validation
-- `dosage` must include units (mg, ml, etc.)
-- `ageGroup` must be one of the predefined age groups
-- `route` must be a valid administration route
-- `medicationName` must not be empty
-
-### Embedding Validation
-- `embedding` must be valid JSON array
-- `embeddingDimensions` must match actual vector size
-- `embeddingModel` must be specified
-
-This schema provides a robust foundation for storing, querying, and retrieving Ghana STG content while supporting advanced features like semantic search and clinical context awareness.
+1. **Vector Embeddings**: Generate 384-dimensional embeddings for semantic search
+2. **Similarity Search**: Implement cosine similarity for better query matching
+3. **Sections Table**: Complete section mappings for all chapters
+4. **Cross-References**: Add relationships between related conditions
+5. **Search Cache**: Implement caching for frequently accessed queries

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(pip3 install:*)",
+      "Bash(python3:*)",
+      "Bash(cp:*)",
+      "Bash(sqlite3:*)",
+      "Bash(rm:*)"
+    ],
+    "deny": [],
+    "ask": [],
+    "additionalDirectories": [
+      "/Users/kobby/AndroidStudioProjects/ClinicalAide/app/src/main/assets/databases"
+    ]
+  }
+}

@@ -14,7 +14,12 @@
       "Bash(git rm:*)",
       "Bash(cp:*)",
       "Bash(python3:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(find:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(sqlite3:*)",
+      "Bash(sed:*)"
     ],
     "deny": [],
     "ask": [],

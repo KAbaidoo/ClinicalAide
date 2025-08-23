@@ -14,3 +14,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Desktop parser build files
+/desktop-parser/build/
+/desktop-parser/stg-parser.log

@@ -1,11 +1,12 @@
 package co.kobby.clinicalaide
 
 import android.app.Application
-import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
+import dagger.hilt.android.HiltAndroidApp
 
+@HiltAndroidApp
 class ClinicalAideApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        PDFBoxResourceLoader.init(applicationContext)
+        // Database initialization handled by Hilt + Room.createFromAsset()
     }
 }

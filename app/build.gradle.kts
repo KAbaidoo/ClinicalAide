@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
 }
 
 android {
@@ -56,8 +57,12 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     
-    // PDF parsing dependencies
-    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+    // Hilt dependencies
+    implementation(libs.hilt.android)
+    implementation(libs.hilt.navigation.compose)
+    ksp(libs.hilt.compiler)
+    
+    // PDF parsing done by desktop parser - no dependency needed
     
     // Unit testing dependencies
     testImplementation(libs.junit)
