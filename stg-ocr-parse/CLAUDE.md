@@ -45,15 +45,16 @@ The project has successfully pivoted from text extraction to OCR-based extractio
 - **Database**: `stg_rag_complete.db` with complete structure
 
 ### 4. Database Design & Implementation
-- **Enhanced Schema**: 
-  - chapters table (31 chapters)
-  - sections table (mapped sections)
-  - conditions_enhanced (304 conditions with references)
-  - medications_enhanced (555 medications with references)
-  - content_chunks (969 RAG-ready chunks)
+- **Enhanced Schema with Room Compatibility**: 
+  - chapters table (31 chapters) - PRIMARY KEY NOT NULL
+  - sections table (mapped sections) - AUTOINCREMENT NOT NULL
+  - conditions_enhanced (304 conditions with references) - ocr_source as INTEGER
+  - medications_enhanced (555 medications with references) - ocr_source as INTEGER
+  - content_chunks (969 RAG-ready chunks) - created_at as TEXT
   - embeddings table (ready for TensorFlow vectors)
-- **Full Citation Support**: GENERATED columns for automatic reference formatting
-- **Android-Ready**: Copied to `/Users/kobby/AndroidStudioProjects/ClinicalAide/app/src/main/assets/databases/stg_rag.db`
+- **Full Citation Support**: Every chunk includes complete references
+- **Single Source of Truth**: `stg_rag_complete.db` is the master database
+- **Android-Ready**: Deployed to `/Users/kobby/AndroidStudioProjects/ClinicalAide/app/src/main/assets/databases/stg_rag.db`
 
 ### 5. Android Integration Architecture
 - **Complete Implementation Guide**: `android_rag_implementation.md`
@@ -66,29 +67,25 @@ The project has successfully pivoted from text extraction to OCR-based extractio
 ## 📁 Project Structure (Updated)
 
 ```
-/Users/kobby/Desktop/MOH-STG/
+/Users/kobby/AndroidStudioProjects/ClinicalAide/stg-ocr-parse/
 ├── GHANA-STG-2017-1.pdf                    # Source document (708 pages)
-├── stg_medical_complete.db                 # OCR-extracted database (660KB)
-├── stg_rag_complete.db                     # RAG-ready database with chunks
-├── stg_complete_referenced.db              # Database with chapter references
+├── stg_rag_complete.db                     # Master RAG database (584KB)
 │
 ├── analyze_pdf_structure.py                # Initial PDF structure analysis
-├── stg_extractor.py                        # Original text extraction (deprecated)
-├── medical_ocr_extractor.py                # OCR-based extraction (CURRENT)
-├── stg_chapter_extractor.py                # Chapter/section mapping
-├── rag_pipeline_builder.py                 # RAG database builder
+├── medical_ocr_extractor.py                # OCR-based extraction
+├── rag_pipeline_builder.py                 # RAG database builder (Room-compatible)
 ├── generate_embeddings.py                  # TensorFlow embedding generator
+├── fix_schema.py                           # DEPRECATED - Schema now correct by default
 │
-├── database_design.md                      # Original database schema
-├── android_rag_implementation.md           # Complete Android guide (NEW)
+├── database_design.md                      # Database schema documentation
+├── android_rag_implementation.md           # Complete Android guide
 ├── embedding_generation_guide.md           # TensorFlow embedding guide
 └── CLAUDE.md                               # This project documentation
 
 Android Project:
 ├── /Users/kobby/AndroidStudioProjects/ClinicalAide/
 └── app/src/main/assets/databases/
-    ├── stg_prepopulated.db                 # Original database
-    └── stg_rag.db                         # RAG-ready database (NEW)
+    └── stg_rag.db                         # Deployed RAG database (584KB)
 ```
 
 ---

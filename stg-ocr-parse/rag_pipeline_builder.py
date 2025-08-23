@@ -125,7 +125,7 @@ class RAGPipelineBuilder:
         );
         
         CREATE TABLE sections (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
             chapter_number INTEGER NOT NULL,
             section_number TEXT NOT NULL,
             title TEXT NOT NULL,
@@ -134,7 +134,7 @@ class RAGPipelineBuilder:
         );
         
         CREATE TABLE conditions_enhanced (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
             name TEXT NOT NULL,
             chapter_number INTEGER,
             section_number TEXT,
@@ -143,11 +143,11 @@ class RAGPipelineBuilder:
             investigations TEXT,
             treatment TEXT,
             reference_citation TEXT,
-            ocr_source BOOLEAN DEFAULT 1
+            ocr_source INTEGER NOT NULL DEFAULT 1
         );
         
         CREATE TABLE medications_enhanced (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
             generic_name TEXT NOT NULL,
             chapter_number INTEGER,
             section_number TEXT,
@@ -156,11 +156,11 @@ class RAGPipelineBuilder:
             route TEXT,
             dosage_info TEXT,
             reference_citation TEXT,
-            ocr_source BOOLEAN DEFAULT 1
+            ocr_source INTEGER NOT NULL DEFAULT 1
         );
         
         CREATE TABLE content_chunks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
             content TEXT NOT NULL,
             chunk_type TEXT NOT NULL,
             source_id INTEGER,
@@ -172,11 +172,11 @@ class RAGPipelineBuilder:
             reference_citation TEXT NOT NULL,
             metadata TEXT,
             embedding BLOB,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT
         );
         
         CREATE TABLE embeddings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
             chunk_id INTEGER NOT NULL,
             embedding BLOB NOT NULL,
             model_name TEXT DEFAULT 'universal-sentence-encoder',

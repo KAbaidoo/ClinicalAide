@@ -15,15 +15,19 @@ An offline-first Android AI chatbot that helps clinicians reference the Ghana Mi
 - **304 medical conditions** with treatments
 - **555 medications** with dosages
 - **969 RAG-ready chunks** with citations
-- **Database size**: 598KB (optimized for mobile)
+- **Database size**: 584KB (optimized for mobile)
+- **Room-compatible schema**: All constraints properly set for Android Room
 
 ---
 
 ## 🚀 Quick Start for Android Developers
 
-### Step 1: Copy Database
+### Step 1: Use the Database
+The database `stg_rag_complete.db` is the single source of truth with Room-compatible schema.
 ```bash
-cp stg_rag_complete.db /path/to/android/app/src/main/assets/databases/stg_rag.db
+# Database is already deployed to Android project
+# Location: app/src/main/assets/databases/stg_rag.db
+# To update: cp stg_rag_complete.db ../app/src/main/assets/databases/stg_rag.db
 ```
 
 ### Step 2: Add Dependencies

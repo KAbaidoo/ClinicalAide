@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """
-Fix database schema to add explicit NOT NULL constraints for Room compatibility
+DEPRECATED: This script is no longer needed as rag_pipeline_builder.py now 
+generates databases with the correct Room-compatible schema by default.
+
+Original purpose: Fixed database schema to add explicit NOT NULL constraints 
+for Room compatibility. The fixes have been incorporated into the main pipeline.
+
+Kept for reference only.
 """
 
 import sqlite3
