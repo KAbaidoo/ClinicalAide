@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(sqlite3:*)",
+      "Bash(claude --version)",
+      "WebSearch",
+      "Bash(rm:*)",
+      "Bash(afplay:*)",
+      "Bash(grep:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

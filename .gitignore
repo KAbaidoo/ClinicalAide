@@ -18,3 +18,6 @@ local.properties
 # Desktop parser build files
 /desktop-parser/build/
 /desktop-parser/stg-parser.log
+*.log
+stg-ocr-parse/pymupdf_output/
+stg-ocr-parse/GHANA-STG-2017-1.pdf

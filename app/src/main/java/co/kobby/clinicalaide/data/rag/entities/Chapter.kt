@@ -6,15 +6,13 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "chapters")
 data class Chapter(
-    @PrimaryKey
-    val id: Int,
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "chapter_id")
+    val chapterId: Int = 0,
     
-    @ColumnInfo(name = "number")
-    val number: Int,
+    @ColumnInfo(name = "chapter_number")
+    val chapterNumber: String,
     
-    @ColumnInfo(name = "title")
-    val title: String,
-    
-    @ColumnInfo(name = "start_page")
-    val startPage: Int
+    @ColumnInfo(name = "chapter_title")
+    val chapterTitle: String
 )

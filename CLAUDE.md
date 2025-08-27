@@ -4,12 +4,12 @@ This document contains comprehensive instructions for building the Ghana STG Cli
 
 ## 🚀 Quick Resume Guide
 
-### Current Project Status (August 18, 2025)
-- ✅ **Database Implementation**: Complete with 81 tests passing (100%)
-- ✅ **TDD Test Suite**: All 5 test categories implemented
-- ✅ **PDF Parsing Phase 1**: FileBasedStgPdfParser implemented with 16 tests passing
-- ✅ **Documentation**: Comprehensive docs in `/docs` directory
-- ⏳ **Next Phase**: Complete PDF parsing and content population
+### Current Project Status (August 27, 2025)
+- ✅ **PDF Extraction Complete**: All 664 pages (29-692) successfully extracted
+- ✅ **Database Populated**: 23 chapters, 831 sections, 664 content entries, 957 metadata entries
+- ✅ **New Database Schema**: Hierarchical structure with chapters→sections→content→metadata
+- ✅ **Android Room Entities Updated**: Matching new Python schema from stg-ocr-parse
+- ⏳ **Next Phase**: Generate embeddings and integrate with Android app
 
 ### Quick Commands to Resume
 ```bash
@@ -30,12 +30,12 @@ git log --oneline -5
 /Users/kobby/Library/Android/sdk/emulator/emulator -avd Pixel_7a_API_34-ext8
 ```
 
-### Recent Updates (August 18, 2025)
-- Implemented FileBasedStgPdfParser with memory-efficient chunked processing
-- Fixed medication extraction patterns for multi-line format
-- Created comprehensive test suite with sample PDFs
-- Handled mangled text extraction from page 29
-- All 16 PDF parser tests passing
+### Recent Updates (August 27, 2025)
+- **MAJOR CHANGE**: New database schema from stg-ocr-parse is now the source of truth
+- Completed full STG document extraction using PyMuPDF (pages 29-692)
+- Populated hierarchical database with chapters, sections, content, and metadata
+- Updated Android Room entities to match new Python schema
+- Database renamed to `stg_rag.db` for clarity and Android integration
 
 ## 📚 Documentation Reference
 
@@ -56,11 +56,11 @@ This project includes comprehensive documentation to guide development. Referenc
    - Key technologies and features
    - Development workflow overview
 
-3. **[docs/database-schema.md](docs/database-schema.md)** - Complete Database Design
-   - All Room entities with detailed field descriptions
-   - Data Access Objects (DAOs) and relationships
-   - Type converters for complex data types
-   - Query examples and performance optimization
+3. **[docs/database-schema.md](docs/database-schema.md)** - Database Design (UPDATED)
+   - **NEW SCHEMA**: Based on stg-ocr-parse extraction pipeline
+   - Tables: chapters, sections, content, embeddings, metadata
+   - Hierarchical structure with proper foreign key relationships
+   - See `stg-ocr-parse/README.md` for complete schema documentation
 
 4. **[docs/pdf-parsing-guide.md](docs/pdf-parsing-guide.md)** - PDF Processing Strategy
    - Multi-phase parsing strategy for 708-page STG document
@@ -138,37 +138,43 @@ This project includes comprehensive documentation to guide development. Referenc
 - Favorites/bookmarks system
 - Search functionality across all content
 
-## Database Schema Implementation
+## Database Schema Implementation (UPDATED August 27, 2025)
 
-**📖 Reference Document: [docs/database-schema.md](docs/database-schema.md)**
+**📖 Source of Truth: stg-ocr-parse/stg_rag.db**
+**📖 Reference: [stg-ocr-parse/README.md](stg-ocr-parse/README.md)**
 
-Use the complete schema defined in the database documentation. Key entities:
+The database schema has been updated to match the Python extraction pipeline. Key entities:
 
 ```kotlin
-// Core entities
-StgChapter      // Medical system categories
-StgCondition    // Individual medical conditions  
-StgContentBlock // Structured content (definition, treatment, dosage, etc.)
-StgEmbedding    // Vector embeddings for semantic search
-StgMedication   // Detailed medication information
-
-// Supporting entities
-StgCrossReference // Relationships between conditions
-StgSearchCache    // Performance optimization
+// Core entities (Android Room)
+Chapter         // Document chapters (23 total)
+Section         // Hierarchical sections with parent-child relationships
+Content         // Actual medical content (paragraph, bullet, table, note)
+Embedding       // Vector embeddings for semantic search
+Metadata        // Key-value pairs for content classification
 ```
 
-## PDF Parsing Implementation
+**Database Statistics:**
+- 23 chapters covering all medical systems
+- 831 sections with proper hierarchy
+- 664 content entries with page references
+- 957 metadata entries for classification
+- Ready for embedding generation
 
-**📖 Reference Document: [docs/pdf-parsing-guide.md](docs/pdf-parsing-guide.md)**
+## PDF Parsing Implementation (COMPLETED)
 
-Follow the detailed parsing guide for implementing the PDF extraction pipeline:
+**📖 Reference: [stg-ocr-parse/CLAUDE.md](stg-ocr-parse/CLAUDE.md)**
 
-1. **Document Structure Analysis** - Extract TOC and map content locations
-2. **Chapter Parsing** - Identify chapter boundaries and titles
-3. **Condition Parsing** - Extract individual medical conditions
-4. **Content Block Parsing** - Parse structured sections (causes, treatment, dosage, etc.)
-5. **Medication Extraction** - Extract specific medication information
-6. **Embedding Generation** - Create vector embeddings for semantic search
+✅ **PDF extraction is complete!** The full Ghana STG document (pages 29-692) has been processed.
+
+**Extraction Pipeline Used:**
+1. **PyMuPDF Extraction** - Direct text extraction (no OCR needed)
+2. **Text Cleaning** - Headers, artifacts, and formatting cleaned
+3. **Table Processing** - ASCII table formatting preserved
+4. **Database Population** - Direct insertion into hierarchical schema
+5. **Metadata Extraction** - Automatic classification of content
+
+**Next Step:** Generate embeddings for semantic search
 
 ## Local AI Implementation
 
@@ -188,10 +194,10 @@ class LocalEmbeddingService {
 ### Semantic Search
 ```kotlin
 class OfflineSemanticSearch {
-    suspend fun searchSimilarContent(query: String): List<StgContentBlock> {
+    suspend fun searchSimilarContent(query: String): List<Content> {
         // Generate query embedding
         // Calculate cosine similarity with stored embeddings
-        // Return top matching content blocks
+        // Return top matching content entries
     }
 }
 ```
@@ -324,18 +330,18 @@ Source: Ghana STG 7th Edition, Pages 29-32
 - Android app configuration
 - Git repository initialization
 
-### ✅ Phase 1: Database Implementation (COMPLETE)
-- Room database schema with 7 entities
-- DAO with 30+ operations
-- Foreign key relationships
-- 81 tests passing (100% success rate)
+### ✅ Phase 1: Database Implementation (UPDATED August 27, 2025)
+- New schema: chapters, sections, content, embeddings, metadata
+- Room entities updated to match Python extraction schema
+- Database populated with complete STG content
+- Foreign key relationships properly maintained
 
-### ⏳ Phase 2: PDF Parsing (NEXT - 1-2 weeks)
-- Parse 708-page Ghana STG PDF
-- Extract chapters, conditions, content blocks
-- Identify medications and dosages
-- Populate database with parsed content
-- **See: docs/pdf-parsing-guide.md**
+### ✅ Phase 2: PDF Parsing (COMPLETE August 27, 2025)
+- Parsed all 664 pages (29-692) of Ghana STG PDF
+- Extracted 23 chapters, 831 sections, 664 content entries
+- Identified 957 metadata entries for classification
+- Database fully populated in `stg_rag.db`
+- **See: stg-ocr-parse/README.md for details**
 
 ### ⏳ Phase 3: AI Integration (2-3 weeks)
 - Implement local embedding generation
@@ -414,35 +420,39 @@ This project demonstrates:
 
 ## Getting Started (For Resuming Work)
 
-### Current State
+### Current State (August 27, 2025)
 - ✅ Development environment setup complete
 - ✅ Project structure initialized
-- ✅ Room database fully implemented with tests
-- ⏳ Ready for PDF parsing phase
+- ✅ PDF extraction and database population COMPLETE
+- ✅ Room entities updated to match new schema
+- ✅ Database `stg_correct.db` ready with full STG content
+- ⏳ Ready for embedding generation and Android integration
 
 ### Next Steps
-1. **Review Current Status**
-   - Check `docs/project-status.md` for detailed status
-   - Review `docs/next-steps.md` for actionable items
+1. **Generate Embeddings**
+   - Create embedding generation script in `stg-ocr-parse/`
+   - Use sentence transformers or similar for vector generation
+   - Populate embeddings table in database
 
-2. **Begin PDF Parsing**
-   - Obtain Ghana STG 7th Edition PDF
-   - Follow implementation guide in `docs/pdf-parsing-guide.md`
-   - Start with TDD approach (write tests first)
+2. **Android Integration**
+   - Copy `stg_correct.db` to `app/src/main/assets/databases/`
+   - Update RagDao with queries for new schema
+   - Test database access from Android app
 
 3. **Testing Workflow**
    ```bash
-   # Verify existing tests still pass
-   ./gradlew connectedAndroidTest
+   # Copy database to Android assets
+   cp stg-ocr-parse/stg_rag.db app/src/main/assets/databases/
    
-   # Start PDF parsing implementation
-   git checkout -b feature/pdf-parsing
+   # Build and test Android app
+   ./gradlew build
+   ./gradlew connectedAndroidTest
    ```
 
 4. **Resources**
-   - Database schema: `docs/database-schema.md`
-   - PDF parsing: `docs/pdf-parsing-guide.md`
-   - Test documentation: `docs/running-database-tests.md`
+   - Python extraction pipeline: `stg-ocr-parse/README.md`
+   - Database schema: `stg-ocr-parse/CLAUDE.md`
+   - Android Room entities: `app/src/.../data/rag/entities/`
 
 ## Additional Resources
 

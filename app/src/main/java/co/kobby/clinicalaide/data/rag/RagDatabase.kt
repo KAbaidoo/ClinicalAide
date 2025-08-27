@@ -10,11 +10,12 @@ import co.kobby.clinicalaide.data.rag.entities.*
 @Database(
     entities = [
         Chapter::class,
-        ContentChunk::class,
-        ConditionEnhanced::class,
-        MedicationEnhanced::class
+        Section::class,
+        Content::class,
+        Embedding::class,
+        Metadata::class
     ],
-    version = 2,
+    version = 1,
     exportSchema = false
 )
 abstract class RagDatabase : RoomDatabase() {

@@ -19,7 +19,14 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(sqlite3:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(pip3 list:*)",
+      "Bash(tesseract:*)",
+      "Bash(brew install:*)",
+      "Bash(brew list:*)",
+      "Bash(cat:*)",
+      "Bash(pkill:*)",
+      "Bash(./monitor_ocr.sh:*)"
     ],
     "deny": [],
     "ask": [],
