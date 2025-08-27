@@ -4,7 +4,9 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "content_chunks")
+@Entity(
+    tableName = "content_chunks"
+)
 data class ContentChunk(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,

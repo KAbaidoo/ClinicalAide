@@ -84,6 +84,9 @@ fun MainScreen(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     )
                 ) {
+                    LaunchedEffect(Unit) {
+                        Log.e("MainScreen", "Error: ${uiState.error}")
+                    }
                     Text(
                         text = "Error: ${uiState.error}",
                         color = MaterialTheme.colorScheme.onErrorContainer,

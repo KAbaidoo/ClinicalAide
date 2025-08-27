@@ -14,7 +14,7 @@ import co.kobby.clinicalaide.data.rag.entities.*
         ConditionEnhanced::class,
         MedicationEnhanced::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class RagDatabase : RoomDatabase() {

@@ -4,7 +4,9 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "medications_enhanced")
+@Entity(
+    tableName = "medications_enhanced"
+)
 data class MedicationEnhanced(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
@@ -34,5 +36,5 @@ data class MedicationEnhanced(
     val referenceCitation: String?,
     
     @ColumnInfo(name = "ocr_source")
-    val ocrSource: Boolean = true
+    val ocrSource: Int = 1
 )
