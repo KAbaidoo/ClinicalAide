@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.1.0] - 2025-08-27
+
+### Added
+- **Vector Embeddings Generation** (`generate_embeddings.py`)
+  - Implemented sentence-transformers for embedding generation
+  - Used all-MiniLM-L6-v2 model (384 dimensions)
+  - Generated embeddings for all 664 content entries
+  - Added context-aware text preparation
+  - Implemented batch processing with progress tracking
+  - Included semantic similarity testing
+
+### Database Enhancements
+- **Embeddings Table Populated**
+  - 664 embeddings stored as BLOB
+  - Each embedding is 1536 bytes (384 dimensions × 4 bytes)
+  - Database size increased from 1.9MB to 3.2MB
+
+### Performance
+- **Embedding Generation**: ~4 seconds for all content
+- **Model Download**: ~80MB (one-time, cached)
+- **Batch Size**: 32 entries for optimal performance
+
 ## [2.0.0] - 2025-08-27
 
 ### Major Changes

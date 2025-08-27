@@ -25,8 +25,11 @@ python3 pymupdf_extractor.py
 # Step 3: Populate database with correct schema
 python3 populate_db_correct_schema.py
 
+# Step 4: Generate embeddings for semantic search
+python3 generate_embeddings.py
+
 # Full pipeline for entire document
-python3 pymupdf_extractor.py && python3 populate_db_correct_schema.py
+python3 pymupdf_extractor.py && python3 populate_db_correct_schema.py && python3 generate_embeddings.py
 ```
 
 Note: The `enhanced_parser.py` is slow and has been replaced with direct database population via `populate_db_correct_schema.py`
@@ -164,14 +167,17 @@ Medications follow pattern: `[drug_name], [route], [dose]`
 - **✅ Full document extraction complete** (pages 29-692)
 - **✅ All 23 chapters identified and populated**
 - **✅ Database schema implemented per user specification**
+- **✅ Embeddings generated** for all content
 - **Processing time**: ~3-4 seconds for database population
 - **Extraction speed**: ~200 pages/minute with PyMuPDF
+- **Embedding generation**: ~4 seconds for 664 entries
 - **Database statistics**:
   - 23 chapters (all document chapters)
   - 831 sections with proper hierarchy
   - 664 content entries
   - 957 metadata entries extracted
-  - Embeddings ready to be populated
+  - 664 embeddings (384 dimensions each)
+  - Database size: 3.2MB with embeddings
 
 ### Chapter Structure
 All 23 chapters have been identified and populated:

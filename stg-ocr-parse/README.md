@@ -8,19 +8,21 @@ This project extracts structured content from the Ghana Standard Treatment Guide
 - ✅ **All 23 chapters identified and populated** in database
 - ✅ **831 sections** extracted with proper hierarchy
 - ✅ **957 metadata entries** automatically extracted
-- ✅ **Database ready** for semantic search implementation
+- ✅ **664 embeddings generated** using all-MiniLM-L6-v2 model
+- ✅ **Database ready** with semantic search capabilities
 
 ## Project Structure
 
 ### Core Scripts
 - `pymupdf_extractor.py` - Main extraction engine using PyMuPDF (processes ~200 pages/minute)
 - `populate_db_correct_schema.py` - Direct database population with user-specified schema
+- `generate_embeddings.py` - Generate vector embeddings for semantic search
 - `text_cleaner.py` - Text cleaning utilities for extraction artifacts
 - `table_formatter.py` - Table detection and ASCII formatting
 
 ### Data Files
 - `GHANA-STG-2017-1.pdf` - Source document (708 pages)
-- `stg_rag.db` - SQLite database with structured content for RAG implementation
+- `stg_rag.db` - SQLite database with structured content and embeddings (3.2MB)
 - `pymupdf_output/` - Extracted content and individual page files
 
 ## Database Schema
@@ -144,21 +146,31 @@ The Ghana STG contains 23 chapters covering comprehensive medical treatment guid
 
 - **Extraction Speed**: ~200 pages/minute
 - **Database Population**: ~3-4 seconds for entire document
+- **Embedding Generation**: ~4 seconds for 664 entries (after model download)
 - **Total Processing Time**: Under 5 minutes for complete pipeline
-- **Storage**: ~25MB extracted JSON, ~1MB database
+- **Storage**: ~25MB extracted JSON, 3.2MB database with embeddings
 
 ## Requirements
 
 - Python 3.x
 - PyMuPDF (`pip install pymupdf`)
+- sentence-transformers (`pip install sentence-transformers`)
 - SQLite3 (included with Python)
+
+## Embeddings
+
+The database includes vector embeddings for semantic search:
+- **Model**: all-MiniLM-L6-v2 (384 dimensions)
+- **Total Embeddings**: 664 (one per content entry)
+- **Storage**: 1.5KB per embedding (384 floats × 4 bytes)
+- **Purpose**: Enable semantic similarity search for medical queries
 
 ## Next Steps
 
-1. **Generate embeddings** for semantic search capabilities
-2. **Build search API** for querying medical guidelines
-3. **Create web interface** for browsing and searching content
-4. **Add medication extraction** with dosage parsing
+1. **Implement semantic search** in Android app using embeddings
+2. **Build RAG pipeline** for context-aware responses
+3. **Create chat interface** with citation support
+4. **Add offline LLM** for response generation
 
 ## License
 
