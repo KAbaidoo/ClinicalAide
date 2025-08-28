@@ -1,250 +1,305 @@
-# Ghana STG RAG Database Schema
+# Ghana STG Hierarchical Database Schema
 
 ## Database Overview
 
-The RAG-ready database (`stg_rag.db`) contains 969 content chunks from the Ghana STG with complete citation support for medical queries. This database was created through OCR extraction and is optimized for Retrieval-Augmented Generation (RAG) with offline AI models.
+The hierarchical database (`stg_rag.db`) contains structured medical content from the Ghana STG 7th Edition with full semantic search support. This database was created through PyMuPDF extraction and is optimized for Retrieval-Augmented Generation (RAG) with local AI models and Android Room compatibility.
 
 ### Database Statistics
-- **31 chapters** with titles and page ranges
-- **304 medical conditions** with references
-- **555 medications** with dosages
-- **969 content chunks** for RAG retrieval
-- **Full citations** for every piece of content
-- **Database size**: 598KB (optimized for mobile)
+- **23 chapters** covering all medical systems
+- **831 sections** with hierarchical relationships
+- **664 content entries** with page references  
+- **957 metadata entries** for classification
+- **664 embeddings** (384 dimensions each)
+- **Database size**: 3.33MB (with embeddings)
 
 ## Architecture Overview
 
+The database uses a hierarchical structure reflecting the medical document organization:
+
 ```
-chapters (31) ──────── conditions_enhanced (304)
-                              │
-                              │
-                       content_chunks (969) ─── embeddings (future)
-                              │
-                              │
-                       medications_enhanced (555)
+chapters (23)
+    │
+    ├── sections (831) ──── content (664) ──── embeddings (664)
+    │                           │
+    │                           └── metadata (957)
+    └── parent_section_id (hierarchical sections)
 ```
 
 ## Table Definitions
 
 ### 1. chapters
-Document structure and navigation for the Ghana STG.
+Medical system chapters from the Ghana STG document.
 
 ```sql
 CREATE TABLE chapters (
-    id INTEGER PRIMARY KEY NOT NULL,
-    number INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    start_page INTEGER NOT NULL
+    chapter_id INTEGER NOT NULL PRIMARY KEY,
+    chapter_number TEXT NOT NULL,
+    chapter_title TEXT NOT NULL
 );
 ```
 
 **Sample Data:**
 ```
-id=1, number=1, title="Cardiovascular System", start_page=15
-id=18, number=18, title="Infectious Diseases", start_page=482
+chapter_id=1, chapter_number="Chapter 1", chapter_title="Disorders of the Gastrointestinal Tract"
+chapter_id=7, chapter_number="Chapter 7", chapter_title="Cardiovascular System"
 ```
 
 **Room Entity:**
 ```kotlin
 @Entity(tableName = "chapters")
 data class Chapter(
-    @PrimaryKey
-    val id: Int,
-    @ColumnInfo(name = "number")
-    val number: Int,
-    @ColumnInfo(name = "title") 
-    val title: String,
-    @ColumnInfo(name = "start_page")
-    val startPage: Int
-)
-```
-
-### 2. content_chunks
-RAG-ready content chunks with full citation support. This is the core table for semantic search and AI response generation.
-
-```sql
-CREATE TABLE content_chunks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    content TEXT NOT NULL,
-    chunk_type TEXT NOT NULL,
-    source_id INTEGER,
-    chapter_number INTEGER,
-    chapter_title TEXT,
-    section_number TEXT,
-    page_number INTEGER NOT NULL,
-    condition_name TEXT,
-    reference_citation TEXT NOT NULL,
-    metadata TEXT,
-    embedding BLOB,
-    created_at TEXT
-);
-```
-
-**Chunk Types:**
-- `treatment` - Treatment protocols and guidelines
-- `clinical_features` - Signs and symptoms
-- `investigation` - Diagnostic procedures
-- `medication` - Drug information and dosing
-- `general` - Other medical content
-
-**Sample Data:**
-```
-id=1
-content="For uncomplicated malaria in adults: Artemether-Lumefantrine..."
-chunk_type="treatment"
-page_number=483
-condition_name="Malaria"
-reference_citation="Ghana STG 2017 - Chapter 18, Section 187, Page 483"
-```
-
-**Room Entity:**
-```kotlin
-@Entity(tableName = "content_chunks")
-data class ContentChunk(
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
-    @ColumnInfo(name = "content")
-    val content: String,
-    @ColumnInfo(name = "chunk_type")
-    val chunkType: String,
-    @ColumnInfo(name = "source_id")
-    val sourceId: Int?,
+    @ColumnInfo(name = "chapter_id")
+    val chapterId: Int = 0,
+    
     @ColumnInfo(name = "chapter_number")
-    val chapterNumber: Int?,
+    val chapterNumber: String,
+    
     @ColumnInfo(name = "chapter_title")
-    val chapterTitle: String?,
-    @ColumnInfo(name = "section_number")
-    val sectionNumber: String?,
-    @ColumnInfo(name = "page_number")
-    val pageNumber: Int,
-    @ColumnInfo(name = "condition_name")
-    val conditionName: String?,
-    @ColumnInfo(name = "reference_citation")
-    val referenceCitation: String,
-    @ColumnInfo(name = "metadata")
-    val metadata: String?,
-    @ColumnInfo(name = "embedding", typeAffinity = ColumnInfo.BLOB)
-    val embedding: ByteArray? = null,
-    @ColumnInfo(name = "created_at")
-    val createdAt: String?
+    val chapterTitle: String
 )
 ```
 
-### 3. conditions_enhanced
-Medical conditions with complete references extracted via OCR.
+### 2. sections
+Hierarchical sections within chapters, supporting nested subsections.
 
 ```sql
-CREATE TABLE conditions_enhanced (
-    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    name TEXT NOT NULL,
-    chapter_number INTEGER,
+CREATE TABLE sections (
+    section_id INTEGER NOT NULL PRIMARY KEY,
+    chapter_id INTEGER NOT NULL,
     section_number TEXT,
-    page_number INTEGER NOT NULL,
-    clinical_features TEXT,
-    investigations TEXT,
-    treatment TEXT,
-    reference_citation TEXT,
-    ocr_source INTEGER NOT NULL DEFAULT 1
+    section_title TEXT NOT NULL,
+    parent_section_id INTEGER,
+    FOREIGN KEY (chapter_id) REFERENCES chapters(chapter_id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_section_id) REFERENCES sections(section_id) ON DELETE CASCADE
 );
 ```
 
 **Sample Data:**
 ```
-id=1, name="Malaria", chapter_number=18, page_number=483
-id=2, name="Hypertension", chapter_number=1, page_number=25
+section_id=1, chapter_id=1, section_number="8", section_title="Diarrhoea", parent_section_id=NULL
+section_id=2, chapter_id=1, section_number="A", section_title="Bacterial gastroenteritis", parent_section_id=1
 ```
 
 **Room Entity:**
 ```kotlin
-@Entity(tableName = "conditions_enhanced")
-data class ConditionEnhanced(
+@Entity(
+    tableName = "sections",
+    foreignKeys = [
+        ForeignKey(
+            entity = Chapter::class,
+            parentColumns = ["chapter_id"],
+            childColumns = ["chapter_id"],
+            onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = Section::class,
+            parentColumns = ["section_id"],
+            childColumns = ["parent_section_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [
+        Index(value = ["chapter_id"]),
+        Index(value = ["parent_section_id"])
+    ]
+)
+data class Section(
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
-    @ColumnInfo(name = "name")
-    val name: String,
-    @ColumnInfo(name = "chapter_number")
-    val chapterNumber: Int?,
+    @ColumnInfo(name = "section_id")
+    val sectionId: Int = 0,
+    
+    @ColumnInfo(name = "chapter_id")
+    val chapterId: Int,
+    
     @ColumnInfo(name = "section_number")
     val sectionNumber: String?,
-    @ColumnInfo(name = "page_number")
-    val pageNumber: Int,
-    @ColumnInfo(name = "clinical_features")
-    val clinicalFeatures: String?,
-    @ColumnInfo(name = "investigations")
-    val investigations: String?,
-    @ColumnInfo(name = "treatment")
-    val treatment: String?,
-    @ColumnInfo(name = "reference_citation")
-    val referenceCitation: String?,
-    @ColumnInfo(name = "ocr_source")
-    val ocrSource: Boolean = true
+    
+    @ColumnInfo(name = "section_title")
+    val sectionTitle: String,
+    
+    @ColumnInfo(name = "parent_section_id")
+    val parentSectionId: Int?
 )
 ```
 
-### 4. medications_enhanced
-Medication information with dosing details extracted via OCR.
+### 3. content
+Medical content blocks with page references and type classification.
 
 ```sql
-CREATE TABLE medications_enhanced (
-    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    generic_name TEXT NOT NULL,
-    chapter_number INTEGER,
-    section_number TEXT,
+CREATE TABLE content (
+    content_id INTEGER NOT NULL PRIMARY KEY,
+    section_id INTEGER NOT NULL,
     page_number INTEGER NOT NULL,
-    strength TEXT,
-    route TEXT,
-    dosage_info TEXT,
-    reference_citation TEXT,
-    ocr_source INTEGER NOT NULL DEFAULT 1
+    content_text TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    FOREIGN KEY (section_id) REFERENCES sections(section_id) ON DELETE CASCADE
 );
 ```
 
+**Content Types:**
+- `paragraph` - Regular text paragraphs
+- `bullet` - Bullet point items
+- `table` - ASCII formatted tables
+- `note` - Special notes and warnings
+
 **Sample Data:**
 ```
-id=1, generic_name="Artemether-Lumefantrine", strength="20mg/120mg", route="Oral"
-id=2, generic_name="Paracetamol", strength="500mg", route="Oral"
+content_id=1, section_id=1, page_number=29, content_type="paragraph"
+content_text="Diarrhoea is defined as the passage of frequent, loose, watery stools..."
 ```
 
 **Room Entity:**
 ```kotlin
-@Entity(tableName = "medications_enhanced")
-data class MedicationEnhanced(
+@Entity(
+    tableName = "content",
+    foreignKeys = [
+        ForeignKey(
+            entity = Section::class,
+            parentColumns = ["section_id"],
+            childColumns = ["section_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [
+        Index(value = ["section_id"]),
+        Index(value = ["page_number"]),
+        Index(value = ["content_type"])
+    ]
+)
+data class Content(
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
-    @ColumnInfo(name = "generic_name")
-    val genericName: String,
-    @ColumnInfo(name = "chapter_number")
-    val chapterNumber: Int?,
-    @ColumnInfo(name = "section_number")
-    val sectionNumber: String?,
+    @ColumnInfo(name = "content_id")
+    val contentId: Int = 0,
+    
+    @ColumnInfo(name = "section_id")
+    val sectionId: Int,
+    
     @ColumnInfo(name = "page_number")
     val pageNumber: Int,
-    @ColumnInfo(name = "strength")
-    val strength: String?,
-    @ColumnInfo(name = "route")
-    val route: String?,
-    @ColumnInfo(name = "dosage_info")
-    val dosageInfo: String?,
-    @ColumnInfo(name = "reference_citation")
-    val referenceCitation: String?,
-    @ColumnInfo(name = "ocr_source")
-    val ocrSource: Boolean = true
+    
+    @ColumnInfo(name = "content_text")
+    val contentText: String,
+    
+    @ColumnInfo(name = "content_type")
+    val contentType: String
 )
 ```
 
-### 5. embeddings (Future Implementation)
-Vector embeddings for semantic similarity search.
+### 4. embeddings
+Vector embeddings for semantic similarity search (384 dimensions).
 
 ```sql
 CREATE TABLE embeddings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    chunk_id INTEGER NOT NULL,
+    embedding_id INTEGER NOT NULL PRIMARY KEY,
+    content_id INTEGER NOT NULL,
     embedding BLOB NOT NULL,
-    model_name TEXT DEFAULT 'universal-sentence-encoder',
-    dimension INTEGER DEFAULT 512,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (chunk_id) REFERENCES content_chunks(id)
+    FOREIGN KEY (content_id) REFERENCES content(content_id) ON DELETE CASCADE
 );
+```
+
+**Sample Data:**
+```
+embedding_id=1, content_id=1, embedding=<384-dimensional float vector as BLOB>
+```
+
+**Room Entity:**
+```kotlin
+@Entity(
+    tableName = "embeddings",
+    foreignKeys = [
+        ForeignKey(
+            entity = Content::class,
+            parentColumns = ["content_id"],
+            childColumns = ["content_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
+data class Embedding(
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "embedding_id")
+    val embeddingId: Int = 0,
+    
+    @ColumnInfo(name = "content_id")
+    val contentId: Int,
+    
+    @ColumnInfo(name = "embedding", typeAffinity = ColumnInfo.BLOB)
+    val embedding: ByteArray
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as Embedding
+        if (embeddingId != other.embeddingId) return false
+        if (contentId != other.contentId) return false
+        if (!embedding.contentEquals(other.embedding)) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = embeddingId
+        result = 31 * result + contentId
+        result = 31 * result + embedding.contentHashCode()
+        return result
+    }
+}
+```
+
+### 5. metadata
+Key-value metadata for content classification and search enhancement.
+
+```sql
+CREATE TABLE metadata (
+    metadata_id INTEGER NOT NULL PRIMARY KEY,
+    content_id INTEGER NOT NULL,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    FOREIGN KEY (content_id) REFERENCES content(content_id) ON DELETE CASCADE
+);
+```
+
+**Metadata Types:**
+- `target_population` - children, adults, pregnant_women, elderly
+- `severity` - mild, moderate, severe
+- `treatment_type` - pharmacological, non-pharmacological
+
+**Sample Data:**
+```
+metadata_id=1, content_id=1, key="target_population", value="children"
+metadata_id=2, content_id=1, key="severity", value="moderate"
+```
+
+**Room Entity:**
+```kotlin
+@Entity(
+    tableName = "metadata",
+    foreignKeys = [
+        ForeignKey(
+            entity = Content::class,
+            parentColumns = ["content_id"],
+            childColumns = ["content_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [
+        Index(value = ["content_id"])
+    ]
+)
+data class Metadata(
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "metadata_id")
+    val metadataId: Int = 0,
+    
+    @ColumnInfo(name = "content_id")
+    val contentId: Int,
+    
+    @ColumnInfo(name = "key")
+    val key: String,
+    
+    @ColumnInfo(name = "value")
+    val value: String
+)
 ```
 
 ## Database Access Object (DAO)
@@ -252,84 +307,155 @@ CREATE TABLE embeddings (
 ```kotlin
 @Dao
 interface RagDao {
+    // Basic queries
+    @Query("SELECT * FROM chapters ORDER BY chapter_number")
+    suspend fun getAllChapters(): List<Chapter>
+    
+    @Query("SELECT * FROM sections WHERE chapter_id = :chapterId ORDER BY section_number")
+    suspend fun getSectionsByChapter(chapterId: Int): List<Section>
+    
+    @Query("SELECT * FROM content WHERE section_id = :sectionId ORDER BY page_number")
+    suspend fun getContentBySection(sectionId: Int): List<Content>
+    
     // Search operations
-    @Query("SELECT * FROM content_chunks WHERE content LIKE '%' || :query || '%' LIMIT :limit")
-    suspend fun searchContentChunks(query: String, limit: Int = 10): List<ContentChunk>
+    @Query("SELECT * FROM content WHERE content_text LIKE '%' || :query || '%' LIMIT :limit")
+    suspend fun searchContent(query: String, limit: Int = 10): List<Content>
     
-    @Query("SELECT * FROM conditions_enhanced WHERE name LIKE '%' || :query || '%' LIMIT :limit")
-    suspend fun searchConditions(query: String, limit: Int = 10): List<ConditionEnhanced>
-    
-    @Query("SELECT * FROM medications_enhanced WHERE generic_name LIKE '%' || :query || '%' LIMIT :limit")
-    suspend fun searchMedications(query: String, limit: Int = 10): List<MedicationEnhanced>
+    @Query("""
+        SELECT c.* FROM content c 
+        INNER JOIN sections s ON c.section_id = s.section_id 
+        WHERE s.section_title LIKE '%' || :query || '%' 
+        OR c.content_text LIKE '%' || :query || '%' 
+        LIMIT :limit
+    """)
+    suspend fun searchContentWithSections(query: String, limit: Int = 10): List<Content>
     
     // Statistics
     @Query("""
         SELECT 
             (SELECT COUNT(*) FROM chapters) as chapterCount,
-            (SELECT COUNT(*) FROM content_chunks) as chunkCount,
-            (SELECT COUNT(*) FROM conditions_enhanced) as conditionCount,
-            (SELECT COUNT(*) FROM medications_enhanced) as medicationCount
+            (SELECT COUNT(*) FROM sections) as sectionCount,
+            (SELECT COUNT(*) FROM content) as contentCount,
+            (SELECT COUNT(*) FROM metadata) as metadataCount,
+            (SELECT COUNT(*) FROM embeddings) as embeddingCount
     """)
     suspend fun getDatabaseStats(): DatabaseStats
+    
+    // Semantic search (for future vector similarity)
+    @Query("SELECT * FROM embeddings WHERE content_id = :contentId")
+    suspend fun getEmbedding(contentId: Int): Embedding?
 }
+
+data class DatabaseStats(
+    val chapterCount: Int,
+    val sectionCount: Int,
+    val contentCount: Int,
+    val metadataCount: Int,
+    val embeddingCount: Int
+)
 ```
 
 ## Schema Compatibility Notes
 
-### Room Database Requirements
-The following schema modifications were required for Room compatibility:
+### Android Room Integration
+The database has been successfully validated with Android Room ORM:
 
-1. **Primary Keys**: All PRIMARY KEY fields must have explicit `NOT NULL` constraint
-2. **Boolean Fields**: SQLite BOOLEAN mapped to INTEGER NOT NULL with default value
-3. **Timestamps**: Changed from TIMESTAMP to TEXT for Room compatibility
-4. **Indices**: Removed database-level indices (can be added via Room annotations if needed)
+✅ **Schema Validation**: All tests pass with 100% success rate  
+✅ **Foreign Key Constraints**: CASCADE deletes properly implemented  
+✅ **Primary Keys**: Explicit `NOT NULL` constraints for Room compatibility  
+✅ **Database Size**: 3.33MB optimized for mobile deployment  
 
-### Migration from Old Schema
-The project migrated from the original StgDatabase schema to this RAG-optimized schema:
-- Old: StgChapter, StgCondition, StgContentBlock entities
-- New: Simplified RAG schema with content_chunks as the core table
-- Benefit: Better suited for semantic search and AI response generation
+### Key Technical Features
+1. **Hierarchical Structure**: Proper parent-child relationships for sections
+2. **Foreign Key Cascade**: Maintains referential integrity with automatic cleanup
+3. **Vector Embeddings**: 384-dimensional embeddings for semantic search
+4. **Content Classification**: Automatic metadata extraction and classification
+5. **Room Compatibility**: Full Android Room ORM support with pre-packaged database
+
+### Migration from Legacy Schema
+The project successfully migrated from the legacy schema:
+- **Old**: Flat RAG schema with content_chunks, conditions_enhanced, medications_enhanced
+- **New**: Hierarchical schema with chapters → sections → content → embeddings/metadata
+- **Benefit**: Better document structure representation and Room compatibility
 
 ## Query Examples
 
-### Search for Medical Content
+### Hierarchical Content Navigation
 ```kotlin
-// Search for malaria treatment
-val results = ragDao.searchContentChunks("malaria treatment", limit = 5)
+// Get all chapters
+val chapters = ragDao.getAllChapters()
+
+// Get sections for a chapter
+val sections = ragDao.getSectionsByChapter(chapterId = 1)
+
+// Get content for a section
+val content = ragDao.getContentBySection(sectionId = 1)
+```
+
+### Medical Content Search
+```kotlin
+// Search within content text
+val results = ragDao.searchContent("malaria treatment", limit = 5)
+
+// Search across sections and content
+val detailedResults = ragDao.searchContentWithSections("diarrhea", limit = 10)
 
 // Each result includes:
-// - content: The actual medical information
-// - referenceCitation: "Ghana STG 2017 - Chapter 18, Page 483"
-// - chunkType: "treatment"
+// - contentText: The actual medical information
+// - pageNumber: Page reference from Ghana STG
+// - contentType: Type classification (paragraph, bullet, table, note)
 ```
 
-### Get Database Statistics
+### Database Statistics
 ```kotlin
 val stats = ragDao.getDatabaseStats()
-// Returns: chapterCount=31, chunkCount=969, conditionCount=304, medicationCount=555
-```
-
-### Full-Text Search with Citations
-```kotlin
-val chunks = ragDao.fullTextSearch("hypertension management")
-chunks.forEach { chunk ->
-    println("${chunk.content}")
-    println("Source: ${chunk.referenceCitation}")
-}
+// Returns: DatabaseStats(
+//   chapterCount=23,
+//   sectionCount=831, 
+//   contentCount=664,
+//   metadataCount=957,
+//   embeddingCount=664
+// )
 ```
 
 ## Performance Characteristics
 
-- **Database Size**: 598KB (optimized for mobile devices)
+- **Database Size**: 3.33MB (includes 664 vector embeddings)
 - **Search Performance**: Sub-second response for text searches
-- **Memory Usage**: Efficient chunking prevents loading entire document
-- **Offline Capability**: 100% offline functionality
-- **Citation Coverage**: Every piece of content has verifiable page references
+- **Memory Usage**: Hierarchical structure enables efficient selective loading
+- **Offline Capability**: 100% offline functionality with local embeddings
+- **Vector Search**: 384-dimensional embeddings ready for semantic similarity
+- **Room Compatibility**: Optimized for Android Room ORM queries
 
-## Future Enhancements
+## Semantic Search Implementation
 
-1. **Vector Embeddings**: Generate 384-dimensional embeddings for semantic search
-2. **Similarity Search**: Implement cosine similarity for better query matching
-3. **Sections Table**: Complete section mappings for all chapters
-4. **Cross-References**: Add relationships between related conditions
-5. **Search Cache**: Implement caching for frequently accessed queries
+### Vector Embedding Details
+- **Model**: all-MiniLM-L6-v2 (384 dimensions)
+- **Coverage**: 100% - all 664 content entries have embeddings
+- **Storage**: Binary BLOB format for efficient mobile storage
+- **Performance**: Ready for cosine similarity calculations
+
+### Example Semantic Search (Future)
+```kotlin
+// Semantic similarity search using embeddings
+class SemanticSearchService {
+    suspend fun findSimilarContent(query: String, limit: Int = 5): List<Content> {
+        // 1. Generate query embedding
+        val queryEmbedding = generateEmbedding(query)
+        
+        // 2. Calculate cosine similarity with stored embeddings
+        val similarities = calculateSimilarities(queryEmbedding)
+        
+        // 3. Return top matching content
+        return getTopMatches(similarities, limit)
+    }
+}
+```
+
+## Current Integration Status
+
+✅ **Database Ready**: All content extracted and embedded  
+✅ **Room Validated**: Schema validation passes 100%  
+✅ **Android Deployed**: Database in app assets (3.33MB)  
+✅ **Embeddings Complete**: 664 vectors ready for semantic search  
+⏳ **Next Phase**: Implement semantic search service in Android app
