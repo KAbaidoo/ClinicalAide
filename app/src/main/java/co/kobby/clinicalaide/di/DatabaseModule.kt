@@ -3,6 +3,7 @@ package co.kobby.clinicalaide.di
 import android.content.Context
 import co.kobby.clinicalaide.data.rag.RagDatabase
 import co.kobby.clinicalaide.data.rag.dao.RagDao
+import co.kobby.clinicalaide.data.rag.search.SemanticSearchService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -32,5 +33,14 @@ object DatabaseModule {
     @Provides
     fun provideRagDao(database: RagDatabase): RagDao {
         return database.ragDao()
+    }
+    
+    /**
+     * Provides the semantic search service for medical content.
+     */
+    @Provides
+    @Singleton
+    fun provideSemanticSearchService(ragDao: RagDao): SemanticSearchService {
+        return SemanticSearchService(ragDao)
     }
 }

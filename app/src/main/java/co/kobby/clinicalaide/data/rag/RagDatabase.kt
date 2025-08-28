@@ -37,6 +37,7 @@ abstract class RagDatabase : RoomDatabase() {
                 )
                     .createFromAsset("databases/stg_rag.db")
                     .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigrationOnDowngrade()
                     .build()
                 INSTANCE = instance
                 instance

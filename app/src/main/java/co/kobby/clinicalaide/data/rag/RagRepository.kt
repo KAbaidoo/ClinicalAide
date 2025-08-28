@@ -2,59 +2,70 @@ package co.kobby.clinicalaide.data.rag
 
 import co.kobby.clinicalaide.data.rag.dao.RagDao
 import co.kobby.clinicalaide.data.rag.entities.*
+import co.kobby.clinicalaide.data.rag.search.SemanticSearchService
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class RagRepository @Inject constructor(
-    private val ragDao: RagDao
+    private val ragDao: RagDao,
+    private val semanticSearchService: SemanticSearchService
 ) {
     
     // ==================== SEARCH OPERATIONS ====================
     
     /**
-     * Primary search function for medical queries
+     * Primary search function for medical queries using semantic search
      */
-    suspend fun searchMedicalContent(query: String, limit: Int = 20): List<ContentChunk> {
-        return ragDao.fullTextSearch(query, limit)
+    suspend fun searchMedicalContent(query: String, limit: Int = 20): List<Content> {
+        val results = semanticSearchService.searchSemantically(query, limit)
+        return results.map { it.content }
     }
     
     /**
-     * Search for specific medical conditions
+     * Enhanced search that returns similarity scores
      */
-    suspend fun searchConditions(query: String, limit: Int = 10): List<ConditionEnhanced> {
-        return ragDao.searchConditions(query, limit)
+    suspend fun searchMedicalContentWithScores(query: String, limit: Int = 20): List<SemanticSearchService.ContentWithSimilarity> {
+        return semanticSearchService.searchSemantically(query, limit)
     }
     
     /**
-     * Search for medications
+     * Find similar content based on an existing content item
      */
-    suspend fun searchMedications(query: String, limit: Int = 10): List<MedicationEnhanced> {
-        return ragDao.searchMedications(query, limit)
+    suspend fun findSimilarContent(contentId: Int, limit: Int = 10): List<Content> {
+        val results = semanticSearchService.findSimilarContent(contentId, limit)
+        return results.map { it.content }
+    }
+    
+    /**
+     * Search content by text
+     */
+    suspend fun searchContent(query: String, limit: Int = 10): List<Content> {
+        return ragDao.searchContent(query, limit)
     }
     
     // ==================== CONTENT RETRIEVAL ====================
     
     /**
-     * Get content chunks by type (treatment, diagnosis, etc.)
+     * Get content by type (treatment, diagnosis, etc.)
      */
-    suspend fun getContentByType(type: String, limit: Int = 10): List<ContentChunk> {
-        return ragDao.getContentChunksByType(type, limit)
+    suspend fun getContentByType(type: String, limit: Int = 10): List<Content> {
+        return ragDao.getContentByType(type, limit)
     }
     
     /**
-     * Get content for a specific condition
+     * Get content for a specific section
      */
-    suspend fun getContentForCondition(conditionName: String, limit: Int = 10): List<ContentChunk> {
-        return ragDao.getContentChunksByCondition(conditionName, limit)
+    suspend fun getContentForSection(sectionId: Int): List<Content> {
+        return ragDao.getContentBySection(sectionId)
     }
     
     /**
-     * Get a specific content chunk by ID
+     * Get a specific content by ID
      */
-    suspend fun getContentChunkById(id: Int): ContentChunk? {
-        return ragDao.getContentChunkById(id)
+    suspend fun getContentById(contentId: Int): Content? {
+        return ragDao.getContentById(contentId)
     }
     
     // ==================== CHAPTER OPERATIONS ====================
@@ -67,17 +78,17 @@ class RagRepository @Inject constructor(
     }
     
     /**
-     * Get conditions in a chapter
+     * Get sections in a chapter
      */
-    suspend fun getConditionsInChapter(chapterNumber: Int): List<ConditionEnhanced> {
-        return ragDao.getConditionsByChapter(chapterNumber)
+    suspend fun getSectionsInChapter(chapterId: Int): List<Section> {
+        return ragDao.getSectionsByChapter(chapterId)
     }
     
     /**
-     * Get medications in a chapter
+     * Get metadata for content
      */
-    suspend fun getMedicationsInChapter(chapterNumber: Int): List<MedicationEnhanced> {
-        return ragDao.getMedicationsByChapter(chapterNumber)
+    suspend fun getMetadataForContent(contentId: Int): List<Metadata> {
+        return ragDao.getMetadataByContent(contentId)
     }
     
     // ==================== STATISTICS ====================
@@ -90,10 +101,10 @@ class RagRepository @Inject constructor(
     }
     
     /**
-     * Get available chunk types
+     * Get available content types
      */
-    suspend fun getAvailableChunkTypes(): List<String> {
-        return ragDao.getChunkTypes()
+    suspend fun getAvailableContentTypes(): List<String> {
+        return ragDao.getContentTypes()
     }
     
     // ==================== FLOW OPERATIONS FOR UI ====================
@@ -101,43 +112,46 @@ class RagRepository @Inject constructor(
     /**
      * Observe search results
      */
-    fun observeSearchResults(query: String, limit: Int = 50): Flow<List<ContentChunk>> {
+    fun observeSearchResults(query: String, limit: Int = 50): Flow<List<Content>> {
         return ragDao.observeSearchResults(query, limit)
     }
     
     /**
      * Observe content by type
      */
-    fun observeContentByType(type: String, limit: Int = 50): Flow<List<ContentChunk>> {
-        return ragDao.observeContentChunksByType(type, limit)
+    fun observeContentByType(type: String, limit: Int = 50): Flow<List<Content>> {
+        return ragDao.observeContentByType(type, limit)
     }
     
     // ==================== RAG-SPECIFIC OPERATIONS ====================
     
     /**
-     * Build context for AI response generation
-     * Returns relevant chunks with citations for a medical query
+     * Build context for AI response generation using semantic search
+     * Returns relevant content with citations and similarity scores for a medical query
      */
-    suspend fun buildRagContext(query: String, maxChunks: Int = 5): RagContext {
-        val chunks = searchMedicalContent(query, maxChunks)
-        val citations = chunks.map { it.referenceCitation }.distinct()
-        val context = chunks.joinToString("\n\n") { chunk ->
-            "${chunk.content}\n[${chunk.referenceCitation}]"
+    suspend fun buildRagContext(query: String, maxContent: Int = 5): RagContext {
+        val contentWithScores = searchMedicalContentWithScores(query, maxContent)
+        val contents = contentWithScores.map { it.content }
+        val citations = contents.map { "Page ${it.pageNumber}" }.distinct()
+        val context = contentWithScores.joinToString("\n\n") { (content, similarity) ->
+            "${content.contentText}\n[Page ${content.pageNumber}, Relevance: ${String.format("%.2f", similarity)}]"
         }
         
         return RagContext(
             query = query,
-            chunks = chunks,
+            contents = contents,
             context = context,
-            citations = citations
+            citations = citations,
+            averageSimilarity = contentWithScores.map { it.similarity }.average().toFloat()
         )
     }
     
     data class RagContext(
         val query: String,
-        val chunks: List<ContentChunk>,
+        val contents: List<Content>,
         val context: String,
-        val citations: List<String>
+        val citations: List<String>,
+        val averageSimilarity: Float = 0.0f
     )
     
     /**
