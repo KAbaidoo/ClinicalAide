@@ -40,7 +40,7 @@ This directory contains comprehensive documentation for the Ghana STG Clinical C
 ## Project Quick Start
 
 ### Overview
-This is an Android application that provides offline access to the Ghana Standard Treatment Guidelines (STG) 7th Edition through an AI-powered RAG (Retrieval-Augmented Generation) chatbot interface. The app uses OCR-extracted content with 969 searchable chunks, each with verifiable citations, designed for healthcare providers working completely offline.
+This is an Android application that provides offline access to the Ghana Standard Treatment Guidelines (STG) 7th Edition through an AI-powered RAG (Retrieval-Augmented Generation) chatbot interface. The app uses a hierarchical database with 664 content entries, each with 384-dimensional vector embeddings, designed for healthcare providers working completely offline.
 
 ### Key Technologies
 - **Platform**: Android (Kotlin)
@@ -51,18 +51,19 @@ This is an Android application that provides offline access to the Ghana Standar
 
 ### Core Features
 1. **Offline-First Design** - Complete functionality without internet
-2. **OCR-Based Extraction** - 679 pages processed, 304 conditions, 555 medications extracted
-3. **RAG Pipeline** - 969 content chunks with full chapter/section/page citations
-4. **Semantic Search** - AI-powered content discovery with TensorFlow embeddings
-5. **Clinical Chatbot** - Natural language interface with verifiable STG references
-6. **Citation System** - Every response includes "Ghana STG 2017 - Chapter X, Page Y" references
+2. **PyMuPDF Extraction** - 664 pages processed with hierarchical structure preservation
+3. **RAG Pipeline** - 664 content entries with vector embeddings and metadata
+4. **Semantic Search** - AI-powered content discovery with 384-dimensional embeddings
+5. **Clinical Chatbot** - Natural language interface with medical terminology understanding
+6. **Hierarchical Navigation** - Browse by chapters (23) → sections (831) → content (664)
 
 ### Development Phases
-1. **Foundation** (✅ COMPLETE) - Database implementation
-2. **OCR & RAG Pipeline** (✅ COMPLETE) - 969 chunks with citations extracted
-3. **AI Integration** (🔄 IN PROGRESS) - Embedding generation and Gemma 2 integration
-4. **User Interface** (⏳ PENDING) - Chat and browse functionality
-5. **Testing & Optimization** (⏳ PENDING) - Performance and accuracy
+1. **Foundation** (✅ COMPLETE) - Hierarchical database implementation
+2. **Content Extraction** (✅ COMPLETE) - PyMuPDF extraction and population
+3. **Vector Embeddings** (✅ COMPLETE) - Embedding generation and Android integration
+4. **Semantic Search** (🔄 IN PROGRESS) - Vector similarity and search service
+5. **User Interface** (⏳ PENDING) - Chat and browse functionality
+6. **Testing & Optimization** (⏳ PENDING) - Performance and accuracy
 
 ## Source Document Analysis
 
@@ -81,32 +82,29 @@ This is an Android application that provides offline access to the Ghana Standar
 
 ## Technical Architecture
 
-### RAG Database Schema
-The application uses a RAG-optimized Room database structure:
+### Hierarchical Database Schema
+The application uses a hierarchical Room database structure:
 
 ```
-chapters (31) ────── conditions_enhanced (304)
-                           │
-                           │
-                    content_chunks (969) ─── embeddings (future)
-                           │
-                           │
-                    medications_enhanced (555)
+chapters (23) → sections (831) → content (664) → embeddings (664)
+                                      ↓
+                                  metadata (957)
 ```
 
 **Key Statistics**:
-- 31 chapters with page ranges
-- 969 RAG-ready content chunks
-- 304 medical conditions with references
-- 555 medications with dosages
-- 100% citation coverage
+- 23 medical chapters covering all major systems
+- 831 hierarchical sections with parent-child relationships
+- 664 content entries with page references
+- 957 metadata entries for classification
+- 664 vector embeddings (384 dimensions each)
+- Android Room validated with 100% success
 
 ### AI/ML Components
-- **Local Embeddings**: TensorFlow Lite (384-dimensional vectors ready)
-- **Semantic Search**: Cosine similarity across 969 content chunks
-- **Language Model**: Gemma 2B for response generation
-- **RAG Pipeline**: Content retrieval with citation tracking
-- **Citation Format**: "Ghana STG 2017 - Chapter 18, Section 187, Page 483"
+- **Local Embeddings**: all-MiniLM-L6-v2 (384-dimensional vectors deployed)
+- **Semantic Search**: Cosine similarity across 664 content entries
+- **Language Model**: Local LLM integration (planned)
+- **RAG Pipeline**: Hierarchical content retrieval with metadata filtering
+- **Search Service**: SemanticSearchService infrastructure complete
 
 ### Offline Implementation
 - All STG content stored locally in Room database
@@ -156,30 +154,31 @@ This project demonstrates:
 ## Current Status & Next Steps
 
 ### Completed (✅)
-1. **Database Implementation** - RAG-optimized Room database
-2. **OCR Extraction** - 679 pages processed with medical patterns
-3. **RAG Pipeline** - 969 content chunks with citations
-4. **Android Integration** - stg_rag.db deployed and working
+1. **Database Implementation** - Hierarchical Room database with validation
+2. **PyMuPDF Extraction** - 664 pages processed with structure preservation
+3. **Vector Embeddings** - 664 embeddings with all-MiniLM-L6-v2 model
+4. **Android Integration** - Room validation passing with 100% success
+5. **Semantic Search Infrastructure** - SemanticSearchService implemented
 
 ### In Progress (🔄)
-5. **Embedding Generation** - TensorFlow Lite integration
-6. **Semantic Search** - Similarity search implementation
+6. **Vector Similarity** - Cosine similarity calculations for search
+7. **RAG Context Assembly** - Content retrieval optimization
 
 ### Upcoming (⏳)
-7. **Gemma 2 Integration** - Local LLM for response generation
-8. **User Interface** - Chat interface with Jetpack Compose
-9. **Testing & Optimization** - Performance and clinical accuracy
+8. **Local LLM Integration** - Response generation capability
+9. **User Interface** - Chat interface with Jetpack Compose
+10. **Testing & Optimization** - Performance and clinical accuracy
 
 ## Additional Resources
 
 - **Source PDF**: `/Users/kobby/Desktop/MOH-STG/GHANA-STG-2017-1.pdf`
 - **OCR Pipeline**: `/Users/kobby/Desktop/MOH-STG/stg-ocr-parse/`
-- **RAG Database**: `/Users/kobby/AndroidStudioProjects/ClinicalAide/app/src/main/assets/databases/stg_rag.db`
+- **RAG Database**: `/Users/kobby/AndroidStudioProjects/ClinicalAide/app/src/main/assets/databases/stg_rag.db` (3.33MB with embeddings)
 - **Documentation**: All `.md` files in `/docs/` directory
 - **Key Scripts**:
-  - `medical_ocr_extractor.py` - OCR extraction with medical patterns
-  - `rag_pipeline_builder.py` - RAG database generation
-  - `generate_embeddings.py` - TensorFlow embedding generation
+  - `pymupdf_extractor.py` - PyMuPDF extraction with structure preservation
+  - `populate_db_correct_schema.py` - Hierarchical database population
+  - `generate_embeddings.py` - Vector embedding generation (all-MiniLM-L6-v2)
 
 For detailed implementation guidance, refer to the specific documentation files. Each file provides comprehensive technical details for different aspects of the project.
 

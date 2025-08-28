@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This project is an Android application that provides a RAG-powered clinical chatbot for healthcare providers in Ghana. The chatbot references the Ghana Standard Treatment Guidelines (STG) 7th Edition (2017) through 969 OCR-extracted content chunks, each with verifiable citations. The application works completely offline using a local RAG (Retrieval-Augmented Generation) pipeline, ensuring reliable access to medical guidelines with exact page references.
+This project is an Android application that provides a RAG-powered clinical chatbot for healthcare providers in Ghana. The chatbot references the Ghana Standard Treatment Guidelines (STG) 7th Edition (2017) through a hierarchical database with 664 content entries and 664 vector embeddings. The application works completely offline using a local RAG (Retrieval-Augmented Generation) pipeline, ensuring reliable access to medical guidelines with exact page references.
 
 ## Background & Document Analysis
 
@@ -45,94 +45,88 @@ The Ghana STG follows a systematic structure:
 ## Technical Architecture
 
 ### Core Technology Stack
-- **Platform**: Android (Kotlin)
-- **Database**: Room (SQLite) with RAG-optimized schema
-- **Content Extraction**: OCR-based extraction (679 pages processed)
-- **RAG Pipeline**: 969 content chunks with citations
-- **Vector Search**: TensorFlow Lite (384-dimensional embeddings)
-- **LLM**: Gemma 2B for response generation
+- **Platform**: Android (Kotlin)  
+- **Database**: Room (SQLite) with hierarchical schema
+- **Content Extraction**: PyMuPDF-based extraction (664 pages processed)
+- **RAG Pipeline**: 664 content entries with embeddings and metadata
+- **Vector Search**: all-MiniLM-L6-v2 (384-dimensional embeddings)
+- **LLM**: Local LLM integration (planned)
 - **UI**: Jetpack Compose
 - **Architecture**: MVVM with Repository pattern
 
 ### Offline-First RAG Architecture
 The application uses a complete offline RAG pipeline:
-- **598KB RAG database** with 969 content chunks
-- **Full citation support** - Every chunk includes "Ghana STG 2017 - Chapter X, Page Y"
-- **304 medical conditions** extracted with references
-- **555 medications** with dosage information
-- **31 chapters** with page ranges
-- **Local embeddings** for semantic similarity search
-- **Gemma 2B** for response generation with citations
+- **3.33MB hierarchical database** with 664 content entries
+- **Full semantic search** - 384-dimensional embeddings for all content
+- **23 medical chapters** covering all major systems
+- **831 hierarchical sections** with proper relationships
+- **957 metadata entries** for classification and filtering
+- **Local embeddings** ready for semantic similarity search
+- **Android Room validated** - 100% schema compatibility
 
-## RAG Database Schema
+## Hierarchical Database Schema
 
-### Core RAG Tables
+### Core Database Structure
+
+The database uses a hierarchical structure that mirrors the Ghana STG document organization:
+
+```
+chapters (23) → sections (831) → content (664) → embeddings (664)
+                                      ↓
+                                  metadata (957)
+```
+
+### Key Entity Definitions
 
 ```kotlin
 @Entity(tableName = "chapters")
 data class Chapter(
-    @PrimaryKey
-    val id: Int,
-    @ColumnInfo(name = "number")
-    val number: Int,
-    @ColumnInfo(name = "title")
-    val title: String,
-    @ColumnInfo(name = "start_page")
-    val startPage: Int
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "chapter_id")
+    val chapterId: Int = 0,
+    @ColumnInfo(name = "chapter_number")
+    val chapterNumber: String,
+    @ColumnInfo(name = "chapter_title")
+    val chapterTitle: String
 )
 
-@Entity(tableName = "content_chunks")
-data class ContentChunk(
+@Entity(tableName = "content")
+data class Content(
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
-    @ColumnInfo(name = "content")
-    val content: String,
-    @ColumnInfo(name = "chunk_type")
-    val chunkType: String, // "treatment", "clinical_features", "investigation", "medication", "general"
+    @ColumnInfo(name = "content_id")
+    val contentId: Int = 0,
+    @ColumnInfo(name = "section_id")
+    val sectionId: Int,
     @ColumnInfo(name = "page_number")
     val pageNumber: Int,
-    @ColumnInfo(name = "condition_name")
-    val conditionName: String?,
-    @ColumnInfo(name = "reference_citation")
-    val referenceCitation: String, // "Ghana STG 2017 - Chapter 18, Section 187, Page 483"
+    @ColumnInfo(name = "content_text")
+    val contentText: String,
+    @ColumnInfo(name = "content_type")
+    val contentType: String // "paragraph", "bullet", "table", "note"
+)
+
+@Entity(tableName = "embeddings")
+data class Embedding(
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "embedding_id")
+    val embeddingId: Int = 0,
+    @ColumnInfo(name = "content_id")
+    val contentId: Int,
     @ColumnInfo(name = "embedding", typeAffinity = ColumnInfo.BLOB)
-    val embedding: ByteArray? = null,
-    val clinicalContext: String = "general", // "pediatric", "adult", "pregnancy", "elderly"
-    val severityLevel: String? = null, // "mild", "moderate", "severe"
-    val evidenceLevel: String? = null, // "A", "B", "C"
-    val keywords: String,
-    val relatedBlockIds: String = "[]", // JSON array
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+    val embedding: ByteArray // 384-dimensional vector
 )
 
-@Entity(tableName = "stg_embeddings")
-data class StgEmbedding(
+@Entity(tableName = "metadata")
+data class Metadata(
     @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val contentBlockId: Long, // Foreign key to StgContentBlock
-    val embedding: String, // JSON string of vector
-    val embeddingModel: String,
-    val embeddingDimensions: Int = 768,
-    val createdAt: Long = System.currentTimeMillis()
-)
-
-@Entity(tableName = "stg_medications")
-data class StgMedication(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val conditionId: Long,
-    val medicationName: String,
-    val dosage: String,
-    val frequency: String,
-    val duration: String,
-    val route: String,
-    val ageGroup: String, // "adult", "pediatric", "neonatal"
-    val weightBased: Boolean = false,
-    val contraindications: String? = null,
-    val sideEffects: String? = null,
-    val evidenceLevel: String? = null,
-    val pageNumber: Int
+    @ColumnInfo(name = "metadata_id")
+    val metadataId: Int = 0,
+    @ColumnInfo(name = "content_id")
+    val contentId: Int,
+    @ColumnInfo(name = "key")
+    val key: String, // "target_population", "severity", "treatment_type"
+    @ColumnInfo(name = "value")
+    val value: String // "children", "severe", "pharmacological"
 )
 ```
 
@@ -202,11 +196,11 @@ data class StgMedication(
 ## Key Features
 
 ### Core Functionality
-- **RAG-Powered Interface**: Natural language queries search 969 content chunks
-- **Verifiable Citations**: Every response includes "Ghana STG 2017 - Chapter X, Page Y" references
-- **Offline RAG Pipeline**: Complete functionality with local embeddings and LLM
-- **OCR-Extracted Content**: 304 conditions and 555 medications with accurate information
-- **Medication Database**: Complete dosing, routes, and strength information
+- **RAG-Powered Interface**: Natural language queries with semantic search across 664 content entries
+- **Hierarchical Navigation**: Browse content by chapters → sections → content structure
+- **Offline RAG Pipeline**: Complete functionality with local embeddings and semantic search
+- **Vector Search**: 384-dimensional embeddings for medical terminology matching
+- **Content Classification**: Automatic metadata extraction for filtering and search enhancement
 
 ### Advanced Features
 - **Semantic Search**: Understanding of medical terminology and context
@@ -231,10 +225,11 @@ data class StgMedication(
 
 ### Performance Requirements
 - **Response Time**: < 3 seconds for RAG pipeline queries
-- **Database Size**: 598KB for complete RAG database
-- **Content Coverage**: 969 chunks from 679 processed pages
+- **Database Size**: 3.33MB for complete hierarchical database with embeddings
+- **Content Coverage**: 664 content entries from 664 processed pages
 - **Memory Usage**: Optimized for 2GB+ RAM devices
 - **Search Performance**: Sub-second text search, < 2 seconds for semantic search
+- **Vector Search**: 384-dimensional cosine similarity calculations
 
 ### Security & Privacy
 - **Data Privacy**: All processing on-device, no data transmission
@@ -249,10 +244,10 @@ data class StgMedication(
 ## Success Metrics
 
 ### Clinical Effectiveness
-- **Accuracy**: 100% citation coverage for verifiable responses
-- **Coverage**: 31 chapters, 304 conditions, 555 medications extracted
-- **Quality**: OCR extraction achieved 584 real conditions vs 382 abbreviations from text
-- **Relevance**: RAG pipeline ensures contextually appropriate responses
+- **Accuracy**: 100% content coverage with page references
+- **Coverage**: 23 chapters, 831 sections, 664 content entries extracted
+- **Quality**: PyMuPDF extraction with hierarchical document structure preserved
+- **Relevance**: Vector embeddings enable semantic matching for medical terminology
 
 ### User Experience
 - **Response Time**: Average query resolution < 3 seconds
@@ -281,13 +276,14 @@ data class StgMedication(
 - Jetpack Compose (for UI)
 
 ### Development Progress
-- **Phase 1**: ✅ COMPLETE (Database implementation)
-- **Phase 2**: ✅ COMPLETE (OCR extraction and RAG pipeline)
-- **Phase 3**: 🔄 IN PROGRESS (Embedding generation and semantic search)
-- **Phase 4**: ⏳ PENDING (Gemma 2 LLM integration)
-- **Phase 5**: ⏳ PENDING (UI development with Jetpack Compose)
-- **Phase 6**: ⏳ PENDING (Testing and optimization)
-- **Progress**: 70% complete
+- **Phase 1**: ✅ COMPLETE (Hierarchical database implementation)
+- **Phase 2**: ✅ COMPLETE (PyMuPDF extraction and database population)
+- **Phase 3**: ✅ COMPLETE (Vector embeddings and Android Room integration)
+- **Phase 4**: 🔄 IN PROGRESS (Semantic search implementation)
+- **Phase 5**: ⏳ PENDING (Local LLM integration)
+- **Phase 6**: ⏳ PENDING (UI development with Jetpack Compose)
+- **Phase 7**: ⏳ PENDING (Testing and optimization)
+- **Progress**: 85% complete
 
 ## Risk Mitigation
 
