@@ -7,6 +7,7 @@ import co.kobby.clinicalaide.data.rag.RagDatabase
 import co.kobby.clinicalaide.data.rag.RagRepository
 import co.kobby.clinicalaide.data.rag.dao.RagDao
 import co.kobby.clinicalaide.data.rag.search.SemanticSearchService
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Before
