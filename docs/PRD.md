@@ -208,6 +208,8 @@ Healthcare providers in Ghana face significant challenges:
 
 ## 4. User Experience Requirements
 
+> **📋 Implementation Note**: For detailed UI development specifications, refer to [UI-PRD.md](UI-PRD.md) which serves as the authoritative source for chat interface implementation.
+
 ### 4.1 User Interface Design
 
 #### 4.1.1 Chat Interface
@@ -217,6 +219,7 @@ Healthcare providers in Ghana face significant challenges:
 - **Quick action buttons** for common queries
 - **Citation links** embedded in responses
 - **Copy/share functionality** for clinical guidance
+- **Session management** via navigation drawer (see UI-PRD.md for details)
 
 #### 4.1.2 Navigation Structure
 - **Bottom navigation** with Chat, Browse, Favorites, Settings
@@ -332,9 +335,10 @@ Healthcare providers in Ghana face significant challenges:
 ## 7. Implementation Timeline
 
 ### 7.1 Development Phases
-- **Phase 1**: PDF parsing and database development (3-4 weeks)
-- **Phase 2**: AI/ML integration and semantic search (2-3 weeks)
-- **Phase 3**: UI development and user experience (3-4 weeks)
+- **Phase 1**: PDF parsing and database development (3-4 weeks) ✅ COMPLETE
+- **Phase 2**: AI/ML integration and semantic search (2-3 weeks) ✅ COMPLETE
+- **Phase 3**: UI development and user experience (3-4 weeks) 🔄 IN PROGRESS
+  - See [UI-PRD.md](UI-PRD.md) for detailed implementation specifications
 - **Phase 4**: Testing, validation, and optimization (2-3 weeks)
 - **Phase 5**: Portfolio documentation and deployment (1-2 weeks)
 - **Total**: 11-16 weeks for complete project

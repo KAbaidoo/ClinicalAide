@@ -31,7 +31,14 @@ This directory contains comprehensive documentation for the Ghana STG Clinical C
 - Content extraction patterns and regex implementations
 - Medication extraction and embedding generation
 
-#### 5. **claude.md**
+#### 5. **UI-PRD.md** (NEW - UI Development Source of Truth)
+- Comprehensive chat interface specifications
+- Session management via navigation drawer
+- Dual database architecture (stg_rag.db + app_database.db)
+- Jetpack Compose implementation details
+- Accessibility and performance standards
+
+#### 6. **claude.md**
 - Instructions for AI coding agent
 - Project overview and key implementation guidelines
 - Architecture patterns and development phases
