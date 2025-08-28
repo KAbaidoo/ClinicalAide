@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.1.1] - 2025-08-28
+
+### Android Integration Milestone
+- **✅ Android Room Validation** - Database schema validation passed with 100% success
+- **✅ Foreign Key Constraints Fixed** - All tables now use `ON DELETE CASCADE` constraints
+- **✅ Schema Compatibility** - Database fully compatible with Android Room ORM
+- **✅ Integration Complete** - Database successfully integrated into Android app
+
+### Schema Corrections
+- **Primary Keys** - Changed from `AUTOINCREMENT` to `NOT NULL PRIMARY KEY` for Room compatibility
+- **Foreign Key Actions** - Added `ON DELETE CASCADE` to all foreign key constraints
+- **Index Conflicts** - Removed duplicate manual indices to avoid Room conflicts
+
+### Testing & Validation  
+- **BasicDatabaseTest** - Pre-packaged database validation passing
+- **EmptyDatabaseTest** - Removed as redundant after schema validation success
+- **Database Size** - Final database with embeddings: 3.18MB
+
+### Documentation Updates
+- Updated schema documentation across README.md and CLAUDE.md
+- Added Android integration status and compatibility notes
+- Corrected database size and embedding statistics
+
 ## [2.1.0] - 2025-08-27
 
 ### Added

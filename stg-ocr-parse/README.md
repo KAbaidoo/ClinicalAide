@@ -3,13 +3,14 @@
 ## Overview
 This project extracts structured content from the Ghana Standard Treatment Guidelines (STG) 7th Edition (2017) PDF document. The pipeline uses PyMuPDF for direct text extraction (no OCR needed) and populates a SQLite database with hierarchically structured medical content.
 
-## Current Status (2025-08-27)
+## Current Status (2025-08-28)
 - ✅ **Full extraction complete**: All 664 pages (29-692) processed
 - ✅ **All 23 chapters identified and populated** in database
 - ✅ **831 sections** extracted with proper hierarchy
 - ✅ **957 metadata entries** automatically extracted
 - ✅ **664 embeddings generated** using all-MiniLM-L6-v2 model
 - ✅ **Database ready** with semantic search capabilities
+- ✅ **Android Room compatible** - schema validation passed with 100% success
 
 ## Project Structure
 
@@ -30,47 +31,47 @@ This project extracts structured content from the Ghana Standard Treatment Guide
 ```sql
 -- Table to store document chapters
 CREATE TABLE chapters (
-    chapter_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chapter_id INTEGER NOT NULL PRIMARY KEY,
     chapter_number TEXT NOT NULL,  -- e.g., "Chapter 1"
     chapter_title TEXT NOT NULL     -- e.g., "Disorders of the Gastrointestinal Tract"
 );
 
 -- Table to store sections within chapters
 CREATE TABLE sections (
-    section_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    section_id INTEGER NOT NULL PRIMARY KEY,
     chapter_id INTEGER NOT NULL,
     section_number TEXT,           -- e.g., "1.2" or "A" for subsections
     section_title TEXT NOT NULL,   -- e.g., "Malaria"
     parent_section_id INTEGER,     -- For nested subsections
-    FOREIGN KEY (chapter_id) REFERENCES chapters(chapter_id),
-    FOREIGN KEY (parent_section_id) REFERENCES sections(section_id)
+    FOREIGN KEY (chapter_id) REFERENCES chapters(chapter_id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_section_id) REFERENCES sections(section_id) ON DELETE CASCADE
 );
 
 -- Table to store treatment content
 CREATE TABLE content (
-    content_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    content_id INTEGER NOT NULL PRIMARY KEY,
     section_id INTEGER NOT NULL,
     page_number INTEGER NOT NULL,
     content_text TEXT NOT NULL,
     content_type TEXT NOT NULL,    -- "paragraph", "bullet", "table", "note"
-    FOREIGN KEY (section_id) REFERENCES sections(section_id)
+    FOREIGN KEY (section_id) REFERENCES sections(section_id) ON DELETE CASCADE
 );
 
 -- Table to store embeddings for semantic search
 CREATE TABLE embeddings (
-    embedding_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    embedding_id INTEGER NOT NULL PRIMARY KEY,
     content_id INTEGER NOT NULL,
     embedding BLOB NOT NULL,
-    FOREIGN KEY (content_id) REFERENCES content(content_id)
+    FOREIGN KEY (content_id) REFERENCES content(content_id) ON DELETE CASCADE
 );
 
 -- Table to store metadata
 CREATE TABLE metadata (
-    metadata_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    metadata_id INTEGER NOT NULL PRIMARY KEY,
     content_id INTEGER NOT NULL,
     key TEXT NOT NULL,            -- e.g., "target_population", "severity"
     value TEXT NOT NULL,          -- e.g., "children", "severe"
-    FOREIGN KEY (content_id) REFERENCES content(content_id)
+    FOREIGN KEY (content_id) REFERENCES content(content_id) ON DELETE CASCADE
 );
 ```
 
@@ -78,8 +79,8 @@ CREATE TABLE metadata (
 
 ### Full Pipeline (Recommended)
 ```bash
-# Extract all pages and populate database
-python3 pymupdf_extractor.py && python3 populate_db_correct_schema.py
+# Extract all pages and populate database with embeddings
+python3 pymupdf_extractor.py && python3 populate_db_correct_schema.py && python3 generate_embeddings.py
 ```
 
 ### Individual Steps
@@ -90,7 +91,10 @@ python3 pymupdf_extractor.py
 # 2. Populate database with extracted content
 python3 populate_db_correct_schema.py
 
-# 3. Query the database
+# 3. Generate embeddings for semantic search
+python3 generate_embeddings.py
+
+# 4. Query the database
 sqlite3 stg_rag.db "SELECT * FROM chapters;"
 ```
 
@@ -165,12 +169,21 @@ The database includes vector embeddings for semantic search:
 - **Storage**: 1.5KB per embedding (384 floats × 4 bytes)
 - **Purpose**: Enable semantic similarity search for medical queries
 
+## Android Integration
+
+The database is fully compatible with Android Room ORM:
+- ✅ **Schema validation** passed with 100% success
+- ✅ **Foreign key constraints** properly defined with CASCADE deletes
+- ✅ **Database ready** for Android app integration at `stg_rag.db` (3.18MB)
+- ✅ **Embeddings functional** - semantic search tested and working
+
 ## Next Steps
 
-1. **Implement semantic search** in Android app using embeddings
-2. **Build RAG pipeline** for context-aware responses
-3. **Create chat interface** with citation support
-4. **Add offline LLM** for response generation
+1. ✅ **Database integration** - Complete (Android Room validated)
+2. **Build chat interface** with Jetpack Compose
+3. **Implement semantic search** in Android app using embeddings  
+4. **Build RAG pipeline** for context-aware responses
+5. **Add offline LLM** for response generation
 
 ## License
 

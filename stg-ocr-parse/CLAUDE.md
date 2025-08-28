@@ -89,47 +89,47 @@ The database (`stg_rag.db`) uses the following schema:
 ```sql
 -- Table to store document chapters
 CREATE TABLE chapters (
-    chapter_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chapter_id INTEGER NOT NULL PRIMARY KEY,
     chapter_number TEXT NOT NULL,  -- e.g., "Chapter 1"
     chapter_title TEXT NOT NULL     -- e.g., "Disorders of the Gastrointestinal Tract"
 );
 
 -- Table to store sections within chapters
 CREATE TABLE sections (
-    section_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    section_id INTEGER NOT NULL PRIMARY KEY,
     chapter_id INTEGER NOT NULL,
     section_number TEXT,           -- e.g., "1.2" (nullable for unnumbered sections)
     section_title TEXT NOT NULL,   -- e.g., "Malaria"
     parent_section_id INTEGER,     -- For subsections (nullable, references section_id)
-    FOREIGN KEY (chapter_id) REFERENCES chapters(chapter_id),
-    FOREIGN KEY (parent_section_id) REFERENCES sections(section_id)
+    FOREIGN KEY (chapter_id) REFERENCES chapters(chapter_id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_section_id) REFERENCES sections(section_id) ON DELETE CASCADE
 );
 
 -- Table to store treatment content
 CREATE TABLE content (
-    content_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    content_id INTEGER NOT NULL PRIMARY KEY,
     section_id INTEGER NOT NULL,
     page_number INTEGER NOT NULL,  -- Page number in the PDF
     content_text TEXT NOT NULL,    -- Actual text (e.g., treatment description)
     content_type TEXT NOT NULL,    -- e.g., "paragraph", "bullet", "table", "note"
-    FOREIGN KEY (section_id) REFERENCES sections(section_id)
+    FOREIGN KEY (section_id) REFERENCES sections(section_id) ON DELETE CASCADE
 );
 
 -- Table to store embeddings for semantic search
 CREATE TABLE embeddings (
-    embedding_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    embedding_id INTEGER NOT NULL PRIMARY KEY,
     content_id INTEGER NOT NULL,
     embedding BLOB NOT NULL,       -- Binary data for the embedding vector
-    FOREIGN KEY (content_id) REFERENCES content(content_id)
+    FOREIGN KEY (content_id) REFERENCES content(content_id) ON DELETE CASCADE
 );
 
 -- Table to store metadata
 CREATE TABLE metadata (
-    metadata_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    metadata_id INTEGER NOT NULL PRIMARY KEY,
     content_id INTEGER NOT NULL,
     key TEXT NOT NULL,            -- e.g., "target_population", "severity"
     value TEXT NOT NULL,          -- e.g., "children", "severe"
-    FOREIGN KEY (content_id) REFERENCES content(content_id)
+    FOREIGN KEY (content_id) REFERENCES content(content_id) ON DELETE CASCADE
 );
 ```
 
@@ -163,11 +163,12 @@ Medications follow pattern: `[drug_name], [route], [dose]`
 
 ## Current State & Performance
 
-### Implementation Status (2025-08-27)
+### Implementation Status (2025-08-28)
 - **✅ Full document extraction complete** (pages 29-692)
 - **✅ All 23 chapters identified and populated**
 - **✅ Database schema implemented per user specification**
 - **✅ Embeddings generated** for all content
+- **✅ Android Room validation** passed with 100% success
 - **Processing time**: ~3-4 seconds for database population
 - **Extraction speed**: ~200 pages/minute with PyMuPDF
 - **Embedding generation**: ~4 seconds for 664 entries
@@ -177,7 +178,7 @@ Medications follow pattern: `[drug_name], [route], [dose]`
   - 664 content entries
   - 957 metadata entries extracted
   - 664 embeddings (384 dimensions each)
-  - Database size: 3.2MB with embeddings
+  - Database size: 3.18MB with embeddings
 
 ### Chapter Structure
 All 23 chapters have been identified and populated:
@@ -256,8 +257,8 @@ The extractor now includes:
 
 ### Quick Start
 ```bash
-# Process entire document (pages 29-692)
-python3 pymupdf_extractor.py && python3 enhanced_parser.py && python3 pymupdf_db_handler.py
+# Process entire document (pages 29-692) - RECOMMENDED PIPELINE
+python3 pymupdf_extractor.py && python3 populate_db_correct_schema.py && python3 generate_embeddings.py
 ```
 
 ### Custom Page Range
