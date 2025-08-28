@@ -65,56 +65,52 @@ class DatabasePopulator:
         """Create database schema according to user specification"""
         schema = """
         -- Table to store document chapters
-        CREATE TABLE IF NOT EXISTS chapters (
-            chapter_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE chapters (
+            chapter_id INTEGER NOT NULL PRIMARY KEY,
             chapter_number TEXT NOT NULL,
             chapter_title TEXT NOT NULL
         );
 
         -- Table to store sections within chapters
-        CREATE TABLE IF NOT EXISTS sections (
-            section_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE sections (
+            section_id INTEGER NOT NULL PRIMARY KEY,
             chapter_id INTEGER NOT NULL,
             section_number TEXT,
             section_title TEXT NOT NULL,
             parent_section_id INTEGER,
-            FOREIGN KEY (chapter_id) REFERENCES chapters(chapter_id),
-            FOREIGN KEY (parent_section_id) REFERENCES sections(section_id)
+            FOREIGN KEY (chapter_id) REFERENCES chapters(chapter_id) ON DELETE CASCADE,
+            FOREIGN KEY (parent_section_id) REFERENCES sections(section_id) ON DELETE CASCADE
         );
 
         -- Table to store treatment content
-        CREATE TABLE IF NOT EXISTS content (
-            content_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE content (
+            content_id INTEGER NOT NULL PRIMARY KEY,
             section_id INTEGER NOT NULL,
             page_number INTEGER NOT NULL,
             content_text TEXT NOT NULL,
             content_type TEXT NOT NULL,
-            FOREIGN KEY (section_id) REFERENCES sections(section_id)
+            FOREIGN KEY (section_id) REFERENCES sections(section_id) ON DELETE CASCADE
         );
 
         -- Table to store embeddings for semantic search
-        CREATE TABLE IF NOT EXISTS embeddings (
-            embedding_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE embeddings (
+            embedding_id INTEGER NOT NULL PRIMARY KEY,
             content_id INTEGER NOT NULL,
             embedding BLOB NOT NULL,
-            FOREIGN KEY (content_id) REFERENCES content(content_id)
+            FOREIGN KEY (content_id) REFERENCES content(content_id) ON DELETE CASCADE
         );
 
         -- Table to store metadata
-        CREATE TABLE IF NOT EXISTS metadata (
-            metadata_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE metadata (
+            metadata_id INTEGER NOT NULL PRIMARY KEY,
             content_id INTEGER NOT NULL,
             key TEXT NOT NULL,
             value TEXT NOT NULL,
-            FOREIGN KEY (content_id) REFERENCES content(content_id)
+            FOREIGN KEY (content_id) REFERENCES content(content_id) ON DELETE CASCADE
         );
         
-        -- Create indexes for better performance
-        CREATE INDEX IF NOT EXISTS idx_sections_chapter ON sections(chapter_id);
-        CREATE INDEX IF NOT EXISTS idx_sections_parent ON sections(parent_section_id);
-        CREATE INDEX IF NOT EXISTS idx_content_section ON content(section_id);
-        CREATE INDEX IF NOT EXISTS idx_content_page ON content(page_number);
-        CREATE INDEX IF NOT EXISTS idx_metadata_content ON metadata(content_id);
+        -- Note: Indices will be created by Room automatically to match entity definitions
+        -- Removing manual index creation to avoid conflicts with Room's auto-generated indices
         """
         
         for statement in schema.split(';'):
