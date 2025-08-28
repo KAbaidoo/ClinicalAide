@@ -116,7 +116,7 @@ fun MainScreen(
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(uiState.searchResults) { chunk ->
+                    items(uiState.searchResults) { content ->
                         Card(
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -124,19 +124,19 @@ fun MainScreen(
                                 modifier = Modifier.padding(12.dp)
                             ) {
                                 Text(
-                                    text = chunk.conditionName ?: "Medical Content",
+                                    text = content.contentType,
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = chunk.content.take(200) + if (chunk.content.length > 200) "..." else "",
+                                    text = content.contentText.take(200) + if (content.contentText.length > 200) "..." else "",
                                     style = MaterialTheme.typography.bodySmall
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = chunk.referenceCitation,
+                                    text = "Page ${content.pageNumber}",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -167,9 +167,9 @@ fun MainScreen(
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 StatItem("Chapters", stats.chapterCount.toString())
-                                StatItem("Chunks", stats.chunkCount.toString())
-                                StatItem("Conditions", stats.conditionCount.toString())
-                                StatItem("Medications", stats.medicationCount.toString())
+                                StatItem("Sections", stats.sectionCount.toString())
+                                StatItem("Content", stats.contentCount.toString())
+                                StatItem("Metadata", stats.metadataCount.toString())
                             }
                         }
                     }
@@ -197,19 +197,14 @@ fun MainScreen(
                                     modifier = Modifier.padding(12.dp)
                                 ) {
                                     Text(
-                                        text = "Chapter ${chapter.number}",
+                                        text = "Chapter ${chapter.chapterNumber}",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                     Text(
-                                        text = chapter.title,
+                                        text = chapter.chapterTitle,
                                         style = MaterialTheme.typography.bodyLarge,
                                         fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = "Page ${chapter.startPage}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }

@@ -62,6 +62,10 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
     
+    // TensorFlow Lite for embeddings and semantic search
+    implementation("org.tensorflow:tensorflow-lite:2.14.0")
+    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+    
     // PDF parsing done by desktop parser - no dependency needed
     
     // Unit testing dependencies

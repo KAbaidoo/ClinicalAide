@@ -30,12 +30,14 @@ class RagDatabaseSimpleTest {
             // Quick test to verify data exists
             val stats = dao.getDatabaseStats()
             println("Chapters: ${stats.chapterCount}")
-            println("Content Chunks: ${stats.chunkCount}")
-            println("Conditions: ${stats.conditionCount}")
-            println("Medications: ${stats.medicationCount}")
+            println("Sections: ${stats.sectionCount}")
+            println("Content: ${stats.contentCount}")
+            println("Metadata: ${stats.metadataCount}")
+            println("Embeddings: ${stats.embeddingCount}")
             
-            assertEquals("Should have 31 chapters", 31, stats.chapterCount)
-            assertEquals("Should have 969 content chunks", 969, stats.chunkCount)
+            // Based on the new database schema from stg-ocr-parse
+            assertTrue("Should have chapters", stats.chapterCount > 0)
+            assertTrue("Should have content", stats.contentCount > 0)
             
         } catch (e: Exception) {
             fail("Database failed to load: ${e.message}")

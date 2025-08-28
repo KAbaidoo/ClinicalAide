@@ -3,7 +3,7 @@ package co.kobby.clinicalaide.ui.main
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import co.kobby.clinicalaide.data.rag.RagRepository
-import co.kobby.clinicalaide.data.rag.entities.ContentChunk
+import co.kobby.clinicalaide.data.rag.entities.Content
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -121,7 +121,7 @@ data class MainUiState(
     val ragStats: co.kobby.clinicalaide.data.rag.dao.RagDao.DatabaseStats? = null,
     val selectedChapterId: Long? = null,
     val searchQuery: String = "",
-    val searchResults: List<ContentChunk> = emptyList(),
+    val searchResults: List<Content> = emptyList(),
     val isSearching: Boolean = false,
     val error: String? = null
 )
