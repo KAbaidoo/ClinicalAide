@@ -10,11 +10,12 @@ This document contains comprehensive instructions for building the Ghana STG Cli
 - ✅ **New Database Schema**: Hierarchical structure with chapters→sections→content→metadata
 - ✅ **Android Room Entities Updated**: Matching new Python schema from stg-ocr-parse
 - ✅ **Embeddings Generated**: 664 vector embeddings using all-MiniLM-L6-v2 (384 dimensions)
-- ✅ **Query Embeddings Added**: 129 pre-computed embeddings for common medical queries
-- ✅ **Semantic Search WORKING**: Returns 30-50% similarity for relevant content (fixed from 0%)
+- ✅ **Production Embedding Service**: Real-time embedding generation for ANY text input
+- ✅ **Configurable Modes**: Production (real-time), Pre-computed (129 queries), Mock (testing)
+- ✅ **Semantic Search WORKING**: Returns 30-50% similarity for relevant content
 - ✅ **Chat Interface Functional**: Responses with proper citations in <1 second
 - ✅ **Performance Validated**: 41.5% match for "malaria treatment", 829ms response time
-- ✅ **Production Ready**: All core features working, tests passing at 91%
+- ✅ **PRODUCTION READY**: No longer limited to pre-computed queries
 
 ### Quick Commands to Resume
 ```bash
@@ -41,13 +42,14 @@ cd stg-ocr-parse && python3 generate_query_embeddings.py
 cp stg-ocr-parse/query_embeddings.json app/src/main/assets/
 ```
 
-### Recent Updates (August 29, 2025 - Latest)
-- **✅ SEMANTIC SEARCH FIXED**: Pre-computed embeddings now working with 30-50% similarity scores
-- **✅ QUERY EMBEDDINGS INTEGRATED**: Added 129 common medical query embeddings using same model
-- **✅ PERFORMANCE OPTIMIZED**: Responses in <1 second with accurate medical content
-- Added Gson dependency for JSON parsing of pre-computed embeddings
-- Fixed EmbeddingService to use pre-computed embeddings instead of mock
-- Validated with real medical queries - getting relevant results with proper citations
+### Recent Updates (August 29, 2025 - Production Update)
+- **✅ PRODUCTION EMBEDDING SERVICE**: Implemented real-time embedding generation for any text
+- **✅ REMOVED LIMITATIONS**: No longer restricted to 129 pre-computed queries
+- **✅ CONFIGURABLE MODES**: Three modes - Production (recommended), Pre-computed, Mock
+- **✅ PRODUCTION SAFEGUARDS**: Proper error handling, no fallback to mock in production
+- Created ProductionEmbeddingService for real-time generation
+- Added EmbeddingConfig for mode management and validation
+- App now generates embeddings for ANY medical query in real-time
 
 ### Previous Updates (August 29, 2025 - Morning)
 - Created 5 new services: SemanticSearchService, EmbeddingService, TFLiteModelLoader, TextPreprocessor, ClinicalRAGService

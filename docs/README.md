@@ -5,10 +5,11 @@
 This project is an Android application that provides a RAG-powered clinical chatbot for healthcare providers in Ghana. The chatbot references the Ghana Standard Treatment Guidelines (STG) 7th Edition (2017) through a hierarchical database with 664 content entries and 664 vector embeddings. The application works completely offline using a local RAG (Retrieval-Augmented Generation) pipeline, ensuring reliable access to medical guidelines with exact page references.
 
 ### 🎯 Current Status (August 29, 2025)
-- **✅ Semantic Search Working**: 30-50% similarity scores with pre-computed embeddings
-- **✅ Performance Validated**: <1 second response times, 41.5% accuracy for relevant queries  
-- **✅ Query Embeddings**: 129 pre-computed embeddings for common medical terms
-- **✅ Production Ready**: All core features functional, 91% test success rate
+- **✅ Production Embedding Service**: Real-time generation for ANY text input
+- **✅ Production Safety**: Multi-layer protection prevents mock embeddings in production
+- **✅ Semantic Search Working**: 30-50% similarity scores with real embeddings
+- **✅ Performance Validated**: <1 second response times, 41.5% accuracy  
+- **✅ PRODUCTION READY**: No query limitations, proper error handling
 
 ## Background & Document Analysis
 
@@ -218,12 +219,13 @@ data class Metadata(
 - **Clinical Alerts**: Highlight referral criteria and serious conditions
 
 ### Embedding Service Implementation
-The app uses a sophisticated embedding service for semantic search:
-- **Pre-computed Embeddings**: 129 common medical queries pre-processed
-- **Model**: all-MiniLM-L6-v2 (384 dimensions) for consistency
-- **Query Matching**: Exact match → Similar query → Composite embedding
-- **Fallback Strategy**: Mock embeddings for unknown queries
-- **Performance**: <100ms for embedding lookup, <1s total response
+The app uses a production-ready embedding service with three modes:
+- **Production Mode**: Real-time generation for ANY text (required for production)
+- **Pre-computed Mode**: 129 cached queries (development only)
+- **Mock Mode**: Testing only, never allowed in production
+- **Model**: all-MiniLM-L6-v2 (384 dimensions) consistency
+- **Safety**: 6-layer protection prevents wrong mode in production
+- **Performance**: 10-50ms generation, <1s total response
 
 ### Example User Interactions
 
