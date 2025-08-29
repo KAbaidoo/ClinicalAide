@@ -21,12 +21,18 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("boolean", "IS_PRODUCTION_BUILD", "false")
+            buildConfigField("String", "EMBEDDING_MODE", "\"DEVELOPMENT\"")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            buildConfigField("boolean", "IS_PRODUCTION_BUILD", "true")
+            buildConfigField("String", "EMBEDDING_MODE", "\"PRODUCTION\"")
         }
     }
     compileOptions {
@@ -42,6 +48,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
