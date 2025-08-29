@@ -32,6 +32,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
         jvmTarget = "11"
@@ -45,6 +46,9 @@ android {
 }
 
 dependencies {
+    // Core library desugaring
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    
     // Core Android dependencies
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -68,6 +72,9 @@ dependencies {
     // TensorFlow Lite for embeddings and semantic search
     implementation("org.tensorflow:tensorflow-lite:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+    
+    // JSON parsing for pre-computed embeddings
+    implementation("com.google.code.gson:gson:2.10.1")
     
     // PDF parsing done by desktop parser - no dependency needed
     

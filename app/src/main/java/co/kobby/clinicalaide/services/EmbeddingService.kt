@@ -8,6 +8,9 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import java.io.InputStreamReader
 
 /**
  * Service for generating text embeddings using TensorFlow Lite.
@@ -23,17 +26,56 @@ class EmbeddingService @Inject constructor(
         private const val TAG = "EmbeddingService"
         private const val MODEL_PATH = "models/use_lite.tflite"
         private const val EMBEDDING_DIMENSION = 384
-        private const val USE_MOCK_MODEL = true // Set to false when TFLite model is available
+        private const val USE_MOCK_MODEL = false // Using pre-computed embeddings
+        private const val QUERY_EMBEDDINGS_PATH = "query_embeddings.json"
     }
+    
+    data class QueryEmbedding(
+        val query: String,
+        val category: String,
+        val embedding: List<Float>
+    )
     
     private var interpreter: Interpreter? = null
     private val embeddingDimension = EMBEDDING_DIMENSION
+    private val queryEmbeddings: Map<String, FloatArray> by lazy { loadQueryEmbeddings() }
     
     init {
-        // Try to load TFLite model if available
-        if (!USE_MOCK_MODEL) {
-            tryLoadModel()
+        // Load pre-computed query embeddings instead of TFLite model
+        Log.d(TAG, "Loading pre-computed query embeddings")
+    }
+    
+    /**
+     * Load pre-computed query embeddings from JSON file.
+     */
+    private fun loadQueryEmbeddings(): Map<String, FloatArray> {
+        val embeddings = mutableMapOf<String, FloatArray>()
+        
+        try {
+            Log.d(TAG, "Attempting to load query embeddings from: $QUERY_EMBEDDINGS_PATH")
+            context.assets.open(QUERY_EMBEDDINGS_PATH).use { inputStream ->
+                val reader = InputStreamReader(inputStream)
+                val type = object : TypeToken<List<QueryEmbedding>>() {}.type
+                val queryList: List<QueryEmbedding> = Gson().fromJson(reader, type)
+                
+                Log.d(TAG, "Parsed ${queryList.size} query embeddings from JSON")
+                
+                queryList.forEach { item ->
+                    embeddings[item.query.lowercase()] = item.embedding.toFloatArray()
+                }
+                
+                Log.d(TAG, "Successfully loaded ${embeddings.size} pre-computed query embeddings")
+                
+                // Log some sample queries for debugging
+                val sampleQueries = embeddings.keys.take(5)
+                Log.d(TAG, "Sample queries loaded: $sampleQueries")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load query embeddings: ${e.message}", e)
+            Log.e(TAG, "Falling back to mock embeddings")
         }
+        
+        return embeddings
     }
     
     /**
@@ -52,16 +94,77 @@ class EmbeddingService @Inject constructor(
     
     /**
      * Generate embedding for a text input.
-     * Uses TFLite model if available, otherwise falls back to mock embeddings.
+     * First checks for pre-computed embeddings, then falls back to generating.
      */
     fun generateEmbedding(text: String): FloatArray {
-        return if (USE_MOCK_MODEL || interpreter == null) {
-            // Use mock embeddings for now
-            generateMockEmbedding(text)
-        } else {
-            // Use real TFLite model
-            generateTFLiteEmbedding(text)
+        Log.d(TAG, "generateEmbedding called for: $text")
+        Log.d(TAG, "Query embeddings loaded: ${queryEmbeddings.size} entries")
+        
+        // First, check if we have a pre-computed embedding for this exact query
+        val normalizedText = text.trim().lowercase()
+        queryEmbeddings[normalizedText]?.let { 
+            Log.d(TAG, "Using pre-computed embedding for: $normalizedText")
+            return it 
         }
+        
+        // Try to find a similar query
+        val similarQuery = findSimilarQuery(normalizedText)
+        if (similarQuery != null) {
+            Log.d(TAG, "Using embedding from similar query: $similarQuery for: $normalizedText")
+            return queryEmbeddings[similarQuery]!!
+        }
+        
+        // If no pre-computed embedding, generate one using the average of related terms
+        return generateCompositeEmbedding(text)
+    }
+    
+    /**
+     * Find a similar query from pre-computed embeddings.
+     */
+    private fun findSimilarQuery(text: String): String? {
+        val words = text.split("\\s+".toRegex())
+        
+        // Look for queries that contain the main keywords
+        return queryEmbeddings.keys.find { query ->
+            words.any { word -> 
+                word.length > 3 && query.contains(word)
+            }
+        }
+    }
+    
+    /**
+     * Generate a composite embedding by averaging embeddings of related terms.
+     */
+    private fun generateCompositeEmbedding(text: String): FloatArray {
+        val words = text.lowercase().split("\\s+".toRegex())
+        val relatedEmbeddings = mutableListOf<FloatArray>()
+        
+        // Find embeddings for individual words or related queries
+        words.forEach { word ->
+            if (word.length > 3) {
+                queryEmbeddings.entries
+                    .filter { it.key.contains(word) }
+                    .take(3)
+                    .forEach { relatedEmbeddings.add(it.value) }
+            }
+        }
+        
+        // If we found related embeddings, average them
+        if (relatedEmbeddings.isNotEmpty()) {
+            Log.d(TAG, "Generating composite embedding from ${relatedEmbeddings.size} related terms")
+            val result = FloatArray(EMBEDDING_DIMENSION)
+            
+            for (i in 0 until EMBEDDING_DIMENSION) {
+                result[i] = relatedEmbeddings.map { it[i] }.average().toFloat()
+            }
+            
+            // Normalize the result
+            return textPreprocessor.normalizeVector(result)
+        }
+        
+        // Last resort: use mock embedding
+        Log.w(TAG, "No related embeddings found, using mock for: $text")
+        return generateMockEmbedding(text)
     }
     
     /**
