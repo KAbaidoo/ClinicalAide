@@ -5,7 +5,10 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import co.kobby.clinicalaide.data.rag.RagDatabase
 import co.kobby.clinicalaide.data.rag.RagRepository
-import co.kobby.clinicalaide.data.rag.search.SemanticSearchService
+import co.kobby.clinicalaide.services.SemanticSearchService
+import co.kobby.clinicalaide.services.EmbeddingService
+import co.kobby.clinicalaide.services.TFLiteModelLoader
+import co.kobby.clinicalaide.services.TextPreprocessor
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
@@ -28,7 +31,12 @@ class RagRepositoryTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         database = RagDatabase.getInstance(context)
         val dao = database.ragDao()
-        val searchService = SemanticSearchService(dao)
+        
+        // Initialize services for the new SemanticSearchService
+        val modelLoader = TFLiteModelLoader(context)
+        val textPreprocessor = TextPreprocessor()
+        val embeddingService = EmbeddingService(context, modelLoader, textPreprocessor)
+        val searchService = SemanticSearchService(database, embeddingService)
         repository = RagRepository(dao, searchService)
     }
     
