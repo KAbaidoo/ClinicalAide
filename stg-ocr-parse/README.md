@@ -3,14 +3,16 @@
 ## Overview
 This project extracts structured content from the Ghana Standard Treatment Guidelines (STG) 7th Edition (2017) PDF document. The pipeline uses PyMuPDF for direct text extraction (no OCR needed) and populates a SQLite database with hierarchically structured medical content.
 
-## Current Status (2025-08-28)
+## Current Status (2025-08-29)
 - ✅ **Full extraction complete**: All 664 pages (29-692) processed
 - ✅ **All 23 chapters identified and populated** in database
 - ✅ **831 sections** extracted with proper hierarchy
 - ✅ **957 metadata entries** automatically extracted
-- ✅ **664 embeddings generated** using all-MiniLM-L6-v2 model
+- ✅ **664 content embeddings generated** using all-MiniLM-L6-v2 model
+- ✅ **129 query embeddings added** for common medical queries
 - ✅ **Database ready** with semantic search capabilities
 - ✅ **Android Room compatible** - schema validation passed with 100% success
+- ✅ **Semantic search validated** - 30-50% similarity scores for relevant queries
 
 ## Project Structure
 
@@ -18,12 +20,15 @@ This project extracts structured content from the Ghana Standard Treatment Guide
 - `pymupdf_extractor.py` - Main extraction engine using PyMuPDF (processes ~200 pages/minute)
 - `populate_db_correct_schema.py` - Direct database population with user-specified schema
 - `generate_embeddings.py` - Generate vector embeddings for semantic search
+- `generate_query_embeddings.py` - Generate embeddings for common medical queries (NEW)
 - `text_cleaner.py` - Text cleaning utilities for extraction artifacts
 - `table_formatter.py` - Table detection and ASCII formatting
 
 ### Data Files
 - `GHANA-STG-2017-1.pdf` - Source document (708 pages)
 - `stg_rag.db` - SQLite database with structured content and embeddings (3.2MB)
+- `query_embeddings.json` - Pre-computed embeddings for 129 common queries (1.4MB)
+- `query_embeddings.bin` - Binary format for Android integration
 - `pymupdf_output/` - Extracted content and individual page files
 
 ## Database Schema
@@ -73,6 +78,15 @@ CREATE TABLE metadata (
     value TEXT NOT NULL,          -- e.g., "children", "severe"
     FOREIGN KEY (content_id) REFERENCES content(content_id) ON DELETE CASCADE
 );
+
+-- Table for pre-computed query embeddings (NEW)
+CREATE TABLE query_embeddings (
+    query_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    query_text TEXT NOT NULL UNIQUE,
+    query_category TEXT,          -- e.g., "General Conditions", "Pediatric", "Emergency"
+    embedding BLOB NOT NULL,
+    usage_count INTEGER DEFAULT 0
+);
 ```
 
 ## Quick Start
@@ -81,6 +95,9 @@ CREATE TABLE metadata (
 ```bash
 # Extract all pages and populate database with embeddings
 python3 pymupdf_extractor.py && python3 populate_db_correct_schema.py && python3 generate_embeddings.py
+
+# Generate query embeddings for common medical queries
+python3 generate_query_embeddings.py
 ```
 
 ### Individual Steps
