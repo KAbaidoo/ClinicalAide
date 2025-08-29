@@ -183,7 +183,7 @@ fun WelcomeMessage(
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             
-            Divider(modifier = Modifier.padding(vertical = 4.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             
             Text(
                 text = "Example queries:",

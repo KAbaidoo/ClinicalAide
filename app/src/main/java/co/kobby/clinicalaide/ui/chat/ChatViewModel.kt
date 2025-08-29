@@ -1,12 +1,13 @@
 package co.kobby.clinicalaide.ui.chat
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import co.kobby.clinicalaide.data.app.AppRepository
 import co.kobby.clinicalaide.data.app.entities.ChatMessage
 import co.kobby.clinicalaide.data.app.entities.ChatSession
 import co.kobby.clinicalaide.data.rag.RagRepository
-import co.kobby.clinicalaide.services.MockLLMService
+import co.kobby.clinicalaide.services.ClinicalRAGService
 import co.kobby.clinicalaide.ui.chat.UiConverters.toMessageUIs
 import co.kobby.clinicalaide.ui.chat.UiConverters.toSessionPreview
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,8 +24,12 @@ import javax.inject.Inject
 class ChatViewModel @Inject constructor(
     private val appRepository: AppRepository,
     private val ragRepository: RagRepository,
-    private val llmService: MockLLMService
+    private val ragService: ClinicalRAGService
 ) : ViewModel() {
+    
+    companion object {
+        private const val TAG = "ChatViewModel"
+    }
     
     // UI State
     private val _uiState = MutableStateFlow(ChatUiState())
@@ -214,38 +219,33 @@ class ChatViewModel @Inject constructor(
                 // Determine if context is needed
                 val needsContext = appRepository.shouldIncludeContext(query)
                 
-                // Build prompt with context if needed
-                val finalQuery = if (needsContext) {
+                // Build context from previous messages if needed
+                val previousContext = if (needsContext) {
                     val recentMessages = appRepository.getRecentMessages(sessionId, 1)
                     if (recentMessages.isNotEmpty()) {
                         val previous = recentMessages.first()
-                        llmService.buildContextualPrompt(
-                            currentQuery = query,
-                            previousQuery = previous.queryText,
-                            previousResponse = previous.responseText
-                        )
+                        "Previous query: ${previous.queryText}\nPrevious response: ${previous.responseText}"
                     } else {
-                        query
+                        null
                     }
                 } else {
-                    query
+                    null
                 }
                 
-                // Search STG database for relevant content
-                val startTime = System.currentTimeMillis()
-                val ragContext = ragRepository.buildRagContext(finalQuery, maxContent = 5)
-                
-                // Generate response with mock LLM
-                val llmResponse = llmService.generateResponse(query, ragContext)
-                val processingTime = System.currentTimeMillis() - startTime
+                // Generate response using RAG service
+                val clinicalResponse = ragService.generateClinicalResponse(
+                    query = query,
+                    previousContext = previousContext,
+                    useSemanticSearch = true
+                )
                 
                 // Parse citations for UI
-                val citations = ragContext.citations.mapIndexed { index, citation ->
+                val citations = clinicalResponse.citations.map { citation ->
                     Citation(
-                        chapter = "Chapter ${(index % 23) + 1}",
-                        section = null,
-                        pageNumber = extractPageNumber(citation),
-                        title = "Ghana STG Reference"
+                        chapter = "STG",
+                        section = citation.source,
+                        pageNumber = citation.pageNumbers.toIntOrNull() ?: 0,
+                        title = "Page ${citation.pageNumbers}"
                     )
                 }
                 
@@ -254,12 +254,12 @@ class ChatViewModel @Inject constructor(
                     val messagesWithoutLoading = state.messages.filterNot { it.isLoading }
                     val botMessage = MessageUI(
                         id = System.currentTimeMillis() + 2,
-                        text = llmResponse.text,
+                        text = clinicalResponse.content,
                         isUser = false,
                         timestamp = formatCurrentTime(),
                         citations = citations,
-                        processingTimeMs = processingTime,
-                        similarityScore = llmResponse.similarityScore
+                        processingTimeMs = clinicalResponse.processingTimeMs,
+                        similarityScore = clinicalResponse.confidence
                     )
                     state.copy(
                         messages = messagesWithoutLoading + botMessage,
@@ -271,20 +271,40 @@ class ChatViewModel @Inject constructor(
                 appRepository.saveMessage(
                     sessionId = sessionId,
                     queryText = query,
-                    responseText = llmResponse.text,
-                    contentIds = llmResponse.contentIds,
-                    citations = llmResponse.citations,
-                    processingTimeMs = processingTime,
-                    similarityScore = llmResponse.similarityScore
+                    responseText = clinicalResponse.content,
+                    contentIds = clinicalResponse.citations.map { it.contentId }.filterNotNull(),
+                    citations = clinicalResponse.citations.joinToString("; ") { 
+                        "${it.source} - Pages ${it.pageNumbers}"
+                    },
+                    processingTimeMs = clinicalResponse.processingTimeMs,
+                    similarityScore = clinicalResponse.confidence
                 )
                 
             } catch (e: Exception) {
+                // Log the error for debugging
+                Log.e(TAG, "Error processing query: $query", e)
+                
                 // Remove loading message on error
                 _uiState.update { state ->
                     state.copy(
                         messages = state.messages.filterNot { it.isLoading },
                         isProcessing = false,
                         error = "Failed to process query: ${e.message}"
+                    )
+                }
+                
+                // Also add an error message to the chat for user visibility
+                val errorMessage = MessageUI(
+                    id = System.currentTimeMillis(),
+                    text = "Sorry, I encountered an error: ${e.message ?: "Unknown error"}. Please try again.",
+                    isUser = false,
+                    timestamp = formatCurrentTime(),
+                    isError = true
+                )
+                
+                _uiState.update { state ->
+                    state.copy(
+                        messages = state.messages + errorMessage
                     )
                 }
             }

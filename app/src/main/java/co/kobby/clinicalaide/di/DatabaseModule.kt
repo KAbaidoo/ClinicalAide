@@ -7,7 +7,11 @@ import co.kobby.clinicalaide.data.app.dao.ChatDao
 import co.kobby.clinicalaide.data.rag.RagDatabase
 import co.kobby.clinicalaide.data.rag.RagRepository
 import co.kobby.clinicalaide.data.rag.dao.RagDao
-import co.kobby.clinicalaide.data.rag.search.SemanticSearchService
+import co.kobby.clinicalaide.services.SemanticSearchService
+import co.kobby.clinicalaide.services.EmbeddingService
+import co.kobby.clinicalaide.services.ClinicalRAGService
+import co.kobby.clinicalaide.services.TFLiteModelLoader
+import co.kobby.clinicalaide.services.TextPreprocessor
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -42,12 +46,57 @@ object DatabaseModule {
     }
     
     /**
+     * Provides the TFLite model loader.
+     */
+    @Provides
+    @Singleton
+    fun provideTFLiteModelLoader(@ApplicationContext context: Context): TFLiteModelLoader {
+        return TFLiteModelLoader(context)
+    }
+    
+    /**
+     * Provides the text preprocessor.
+     */
+    @Provides
+    @Singleton
+    fun provideTextPreprocessor(): TextPreprocessor {
+        return TextPreprocessor()
+    }
+    
+    /**
+     * Provides the embedding service for generating text embeddings.
+     */
+    @Provides
+    @Singleton
+    fun provideEmbeddingService(
+        @ApplicationContext context: Context,
+        modelLoader: TFLiteModelLoader,
+        textPreprocessor: TextPreprocessor
+    ): EmbeddingService {
+        return EmbeddingService(context, modelLoader, textPreprocessor)
+    }
+    
+    /**
      * Provides the semantic search service for medical content.
      */
     @Provides
     @Singleton
-    fun provideSemanticSearchService(ragDao: RagDao): SemanticSearchService {
-        return SemanticSearchService(ragDao)
+    fun provideSemanticSearchService(
+        ragDatabase: RagDatabase,
+        embeddingService: EmbeddingService
+    ): SemanticSearchService {
+        return SemanticSearchService(ragDatabase, embeddingService)
+    }
+    
+    /**
+     * Provides the clinical RAG service for response generation.
+     */
+    @Provides
+    @Singleton
+    fun provideClinicalRAGService(
+        semanticSearchService: SemanticSearchService
+    ): ClinicalRAGService {
+        return ClinicalRAGService(semanticSearchService)
     }
     
     /**

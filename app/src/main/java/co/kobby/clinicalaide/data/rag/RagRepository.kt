@@ -2,7 +2,7 @@ package co.kobby.clinicalaide.data.rag
 
 import co.kobby.clinicalaide.data.rag.dao.RagDao
 import co.kobby.clinicalaide.data.rag.entities.*
-import co.kobby.clinicalaide.data.rag.search.SemanticSearchService
+import co.kobby.clinicalaide.services.SemanticSearchService
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,23 +19,23 @@ class RagRepository @Inject constructor(
      * Primary search function for medical queries using semantic search
      */
     suspend fun searchMedicalContent(query: String, limit: Int = 20): List<Content> {
-        val results = semanticSearchService.searchSemantically(query, limit)
+        val results = semanticSearchService.searchContent(query, limit)
         return results.map { it.content }
     }
     
     /**
      * Enhanced search that returns similarity scores
      */
-    suspend fun searchMedicalContentWithScores(query: String, limit: Int = 20): List<SemanticSearchService.ContentWithSimilarity> {
-        return semanticSearchService.searchSemantically(query, limit)
+    suspend fun searchMedicalContentWithScores(query: String, limit: Int = 20): List<SemanticSearchService.SearchResult> {
+        return semanticSearchService.searchContent(query, limit)
     }
     
     /**
      * Find similar content based on an existing content item
      */
     suspend fun findSimilarContent(contentId: Int, limit: Int = 10): List<Content> {
-        val results = semanticSearchService.findSimilarContent(contentId, limit)
-        return results.map { it.content }
+        // For now, return empty list - would need content-based similarity
+        return emptyList()
     }
     
     /**

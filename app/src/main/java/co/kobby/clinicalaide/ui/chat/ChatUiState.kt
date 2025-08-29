@@ -29,7 +29,8 @@ data class MessageUI(
     val citations: List<Citation> = emptyList(),
     val isLoading: Boolean = false,
     val processingTimeMs: Long? = null,
-    val similarityScore: Float? = null
+    val similarityScore: Float? = null,
+    val isError: Boolean = false
 )
 
 /**
