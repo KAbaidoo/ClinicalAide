@@ -134,7 +134,7 @@ class RagRepository @Inject constructor(
         val contents = contentWithScores.map { it.content }
         val citations = contents.map { "Page ${it.pageNumber}" }.distinct()
         val context = contentWithScores.joinToString("\n\n") { (content, similarity) ->
-            "${content.contentText}\n[Page ${content.pageNumber}, Relevance: ${String.format("%.2f", similarity)}]"
+            "${content.contentText}\n[Page ${content.pageNumber}, Relevance: ${String.format(java.util.Locale.ROOT, "%.2f", similarity)}]"
         }
         
         return RagContext(

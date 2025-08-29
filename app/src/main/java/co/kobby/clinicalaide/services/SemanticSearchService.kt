@@ -112,7 +112,7 @@ class SemanticSearchService @Inject constructor(
         val contextBuilder = StringBuilder()
         
         searchResults.forEachIndexed { index, result ->
-            contextBuilder.append("=== Context ${index + 1} (Similarity: ${String.format("%.2f", result.similarity)}) ===\n")
+            contextBuilder.append("=== Context ${index + 1} (Similarity: ${String.format(java.util.Locale.ROOT, "%.2f", result.similarity)}) ===\n")
             contextBuilder.append("Page: ${result.content.pageNumber}")
             contextBuilder.append("\n")
             

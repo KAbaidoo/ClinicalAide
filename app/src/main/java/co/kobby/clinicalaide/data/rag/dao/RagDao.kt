@@ -46,7 +46,7 @@ interface RagDao {
     
     @Query("""
         SELECT * FROM content 
-        WHERE content_text LIKE '%' || :query || '%' 
+        WHERE TRIM(:query) != '' AND content_text LIKE '%' || :query || '%' 
         ORDER BY 
             CASE 
                 WHEN content_text LIKE :query || '%' THEN 1 
@@ -134,7 +134,7 @@ interface RagDao {
     
     @Query("""
         SELECT * FROM content 
-        WHERE content_text LIKE '%' || :query || '%'
+        WHERE TRIM(:query) != '' AND content_text LIKE '%' || :query || '%'
         ORDER BY page_number
         LIMIT :limit
     """)

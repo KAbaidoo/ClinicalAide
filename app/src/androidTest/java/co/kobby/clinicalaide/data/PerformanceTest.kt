@@ -124,11 +124,11 @@ class PerformanceTest {
     @Test
     fun test_semanticSearch_under300ms() = runBlocking {
         // Warm up
-        searchService.searchSemantically("test", 1)
+        searchService.searchContent("test", 1)
         
         // Measure semantic search
         val searchTime = measureTimeMillis {
-            val results = searchService.searchSemantically("fever and headache symptoms", 10)
+            val results = searchService.searchContent("fever and headache symptoms", 10)
             assertNotNull("Results should not be null", results)
             assertTrue("Should find results", results.isNotEmpty())
         }
@@ -222,7 +222,7 @@ class PerformanceTest {
                 async { dao.searchContent("malaria", 10) },
                 async { dao.getDatabaseStats() },
                 async { dao.getContentTypes() },
-                async { searchService.searchSemantically("fever", 5) }
+                async { searchService.searchContent("fever", 5) }
             ).awaitAll()
             
             assertEquals("Should complete all operations", 5, results.size)
