@@ -2,6 +2,8 @@ package co.kobby.clinicalaide.services
 
 import android.content.Context
 import android.util.Log
+import co.kobby.clinicalaide.BuildConfig
+import co.kobby.clinicalaide.config.EmbeddingConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import org.tensorflow.lite.Interpreter
 import java.nio.ByteBuffer
@@ -26,7 +28,6 @@ class EmbeddingService @Inject constructor(
         private const val TAG = "EmbeddingService"
         private const val MODEL_PATH = "models/use_lite.tflite"
         private const val EMBEDDING_DIMENSION = 384
-        private const val USE_MOCK_MODEL = false // Using pre-computed embeddings
         private const val QUERY_EMBEDDINGS_PATH = "query_embeddings.json"
     }
     
@@ -39,6 +40,7 @@ class EmbeddingService @Inject constructor(
     private var interpreter: Interpreter? = null
     private val embeddingDimension = EMBEDDING_DIMENSION
     private val queryEmbeddings: Map<String, FloatArray> by lazy { loadQueryEmbeddings() }
+    private val productionService = ProductionEmbeddingService(context, textPreprocessor)
     
     init {
         // Load pre-computed query embeddings instead of TFLite model
@@ -98,8 +100,46 @@ class EmbeddingService @Inject constructor(
      */
     fun generateEmbedding(text: String): FloatArray {
         Log.d(TAG, "generateEmbedding called for: $text")
-        Log.d(TAG, "Query embeddings loaded: ${queryEmbeddings.size} entries")
+        Log.d(TAG, "Current embedding mode: ${EmbeddingConfig.currentMode}")
         
+        return when (EmbeddingConfig.currentMode) {
+            EmbeddingConfig.Mode.PRODUCTION -> {
+                // Production mode: Real-time generation
+                try {
+                    if (productionService.isReady()) {
+                        Log.d(TAG, "Using production embedding service")
+                        productionService.generateEmbedding(text)
+                    } else {
+                        Log.e(TAG, "Production service not ready")
+                        throw IllegalStateException(
+                            "Production embedding service is not initialized. " +
+                            "Cannot generate embeddings in production mode."
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to generate production embedding", e)
+                    throw e // Re-throw in production mode - no fallback allowed
+                }
+            }
+            
+            EmbeddingConfig.Mode.PRE_COMPUTED -> {
+                // Pre-computed mode: Use cached embeddings
+                Log.d(TAG, "Using pre-computed embeddings (${queryEmbeddings.size} entries)")
+                generatePreComputedEmbedding(text)
+            }
+            
+            EmbeddingConfig.Mode.MOCK -> {
+                // Mock mode: Generate fake embeddings for testing
+                Log.d(TAG, "Using mock embeddings (development mode)")
+                generateMockEmbedding(text)
+            }
+        }
+    }
+    
+    /**
+     * Generate embedding using pre-computed embeddings.
+     */
+    private fun generatePreComputedEmbedding(text: String): FloatArray {
         // First, check if we have a pre-computed embedding for this exact query
         val normalizedText = text.trim().lowercase()
         queryEmbeddings[normalizedText]?.let { 
@@ -114,7 +154,7 @@ class EmbeddingService @Inject constructor(
             return queryEmbeddings[similarQuery]!!
         }
         
-        // If no pre-computed embedding, generate one using the average of related terms
+        // If no pre-computed embedding, generate composite
         return generateCompositeEmbedding(text)
     }
     
@@ -162,16 +202,33 @@ class EmbeddingService @Inject constructor(
             return textPreprocessor.normalizeVector(result)
         }
         
-        // Last resort: use mock embedding
-        Log.w(TAG, "No related embeddings found, using mock for: $text")
-        return generateMockEmbedding(text)
+        // No fallback to mock in non-mock mode
+        if (EmbeddingConfig.currentMode == EmbeddingConfig.Mode.MOCK) {
+            Log.w(TAG, "No related embeddings found, using mock for: $text")
+            return generateMockEmbedding(text)
+        } else {
+            // In production or pre-computed mode, throw exception instead of using mock
+            throw IllegalStateException(
+                "Cannot generate embedding for text: '$text'. " +
+                "No related embeddings found and mock fallback is not allowed in ${EmbeddingConfig.currentMode} mode."
+            )
+        }
     }
     
     /**
      * Generate embedding using TensorFlow Lite model.
      */
     private fun generateTFLiteEmbedding(text: String): FloatArray {
-        val interpreter = this.interpreter ?: return generateMockEmbedding(text)
+        val interpreter = this.interpreter ?: run {
+            // Never fall back to mock in production
+            if (EmbeddingConfig.currentMode == EmbeddingConfig.Mode.MOCK) {
+                return generateMockEmbedding(text)
+            } else {
+                throw IllegalStateException(
+                    "TFLite interpreter not initialized. Cannot generate embeddings without a model."
+                )
+            }
+        }
         
         try {
             // Preprocess text
@@ -207,16 +264,32 @@ class EmbeddingService @Inject constructor(
             return textPreprocessor.normalizeVector(embedding)
             
         } catch (e: Exception) {
-            Log.e(TAG, "Error generating TFLite embedding, falling back to mock", e)
-            return generateMockEmbedding(text)
+            Log.e(TAG, "Error generating TFLite embedding", e)
+            // Never fall back to mock in production
+            if (EmbeddingConfig.currentMode == EmbeddingConfig.Mode.MOCK) {
+                return generateMockEmbedding(text)
+            } else {
+                throw RuntimeException(
+                    "Failed to generate TFLite embedding for text: '$text'",
+                    e
+                )
+            }
         }
     }
     
     /**
      * Generate a mock embedding for testing.
      * Creates a deterministic embedding based on text features.
+     * WARNING: This should NEVER be called in production mode.
      */
     private fun generateMockEmbedding(text: String): FloatArray {
+        // Safety check: Ensure we're not in production
+        if (BuildConfig.IS_PRODUCTION_BUILD && EmbeddingConfig.currentMode != EmbeddingConfig.Mode.MOCK) {
+            throw IllegalStateException(
+                "CRITICAL: Attempted to generate mock embedding in production build! " +
+                "Current mode: ${EmbeddingConfig.currentMode}"
+            )
+        }
         val embedding = FloatArray(embeddingDimension)
         val words = text.lowercase().split("\\s+".toRegex())
         
@@ -285,10 +358,20 @@ class EmbeddingService @Inject constructor(
      * Get information about the current embedding method.
      */
     fun getEmbeddingInfo(): String {
-        return if (USE_MOCK_MODEL || interpreter == null) {
-            "Using mock embeddings (deterministic, ${EMBEDDING_DIMENSION} dimensions)"
-        } else {
-            "Using TFLite model (${EMBEDDING_DIMENSION} dimensions)\n${modelLoader.getModelDetails()}"
+        return when (EmbeddingConfig.currentMode) {
+            EmbeddingConfig.Mode.PRODUCTION -> {
+                if (productionService.isReady()) {
+                    "Using production embedding service (${EMBEDDING_DIMENSION} dimensions)"
+                } else {
+                    "Production service not initialized"
+                }
+            }
+            EmbeddingConfig.Mode.PRE_COMPUTED -> {
+                "Using pre-computed embeddings (${queryEmbeddings.size} queries, ${EMBEDDING_DIMENSION} dimensions)"
+            }
+            EmbeddingConfig.Mode.MOCK -> {
+                "Using mock embeddings (deterministic, ${EMBEDDING_DIMENSION} dimensions)"
+            }
         }
     }
     
