@@ -82,6 +82,12 @@ interface RagDao {
     @Query("SELECT COUNT(*) FROM embeddings")
     suspend fun getEmbeddingCount(): Int
     
+    @Query("SELECT * FROM embeddings")
+    suspend fun getAllEmbeddings(): List<Embedding>
+    
+    @Query("SELECT * FROM metadata WHERE content_id = :contentId")
+    suspend fun getMetadataByContentId(contentId: Int): List<Metadata>
+    
     // ==================== FULL-TEXT SEARCH ====================
     
     @Query("""
